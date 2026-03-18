@@ -1,0 +1,20 @@
+display_information:
+  name: Vault Slack Write
+features:
+  bot_user:
+    display_name: Vault Slack Write
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.public
+      - im:write
+      - mpim:write
+      - users:read
+settings:
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: true

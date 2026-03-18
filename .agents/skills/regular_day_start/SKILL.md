@@ -12,6 +12,7 @@ Run the vault’s morning automations in one go. This is best-effort: each step 
 - `regular_gcal_today`
 - `regular_daily_brief_todoist`
 - `regular_process_emails`
+- `regular_process_slack`
 - `regular_web_daily_brief`
 
 ## Run
@@ -23,6 +24,8 @@ Run the vault’s morning automations in one go. This is best-effort: each step 
   - `.\.venv\Scripts\python.exe 90_System\Skills\daily_brief_todoist\daily_brief_todoist.py sync`
 - Process emails:
   - `.\.venv\Scripts\python.exe 90_System\Skills\process_emails\process_emails.py sync`
+- Process Slack:
+  - `.\.venv\Scripts\python.exe 90_System\Skills\process_slack\process_slack.py sync`
 - Daily News:
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_sources.py fetch --pretty > 70_Exports\sources.json`
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_daily_brief.py render --sources-file 70_Exports\sources.json --output-file 70_Exports\daily_news.md`

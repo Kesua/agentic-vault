@@ -10,6 +10,7 @@ Run the vault’s end-of-day automations in order so transcripts, mailbox export
 ## It runs
 - `regular_fireflies_sync`
 - `regular_process_emails`
+- `regular_process_slack`
 - `regular_people_sync`
 - `regular_create_links`
 
@@ -18,6 +19,8 @@ Run the vault’s end-of-day automations in order so transcripts, mailbox export
   - `.\.venv\Scripts\python.exe 90_System\Skills\fireflies_sync\fireflies_sync.py sync`
 - Process emails:
   - `.\.venv\Scripts\python.exe 90_System\Skills\process_emails\process_emails.py sync`
+- Process Slack:
+  - `.\.venv\Scripts\python.exe 90_System\Skills\process_slack\process_slack.py sync`
 - People sync:
   - `.\.venv\Scripts\python.exe 90_System\Skills\meeting_attendees_people_sync\attendee_people_sync.py sync`
 - Create links:
