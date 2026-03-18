@@ -1,0 +1,33 @@
+﻿# File access policy (repo-local, human-readable).
+#
+# Repo-local globs below describe the vault itself.
+
+[read]
+allow = ["**/*"]
+deny = [
+  ".git/**",
+  ".venv/**",
+  "90_System/secrets/**",
+]
+
+[edit]
+allow = [
+  "**/*.md",
+  "**/*.toml",
+  "**/*.rules",
+  "**/*.py",
+  "**/*.ps1",
+  "requirements.txt",
+  ".gitignore",
+]
+deny = [
+  ".git/**",
+  ".venv/**",
+  ".obsidian/**",
+  "_attachments/**",
+  "OneNoteNotes/**",
+]
+
+[delete]
+allow = []
+deny = ["**/*"]

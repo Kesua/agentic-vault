@@ -1,0 +1,11 @@
+﻿model = "gpt-5.4"
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+
+allowed_roots = [
+  "C:\\Users\\jan.papousek\\Coding\\agentic-vault",
+]

@@ -1,0 +1,40 @@
+﻿{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git rev-parse*)",
+      "Bash(git ls-files*)"
+    ],
+    "deny": [
+      "Read(.git/**)",
+      "Read(.venv/**)",
+      "Read(.obsidian/**)",
+      "Read(_attachments/**)",
+      "Read(OneNoteNotes/**)",
+      "Read(90_System/secrets/**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Edit(.git/**)",
+      "Edit(.venv/**)",
+      "Edit(.obsidian/**)",
+      "Edit(_attachments/**)",
+      "Edit(OneNoteNotes/**)",
+      "Edit(90_System/secrets/**)",
+      "Write(.git/**)",
+      "Write(.venv/**)",
+      "Write(.obsidian/**)",
+      "Write(_attachments/**)",
+      "Write(OneNoteNotes/**)",
+      "Write(90_System/secrets/**)",
+      "MultiEdit(.git/**)",
+      "MultiEdit(.venv/**)",
+      "MultiEdit(.obsidian/**)",
+      "MultiEdit(_attachments/**)",
+      "MultiEdit(OneNoteNotes/**)",
+      "MultiEdit(90_System/secrets/**)"
+    ]
+  }
+}

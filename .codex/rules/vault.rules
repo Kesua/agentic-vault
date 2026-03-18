@@ -1,0 +1,49 @@
+# Codex command-approval rules (repo-local).
+#
+# These are "prefix rules": they match the start of an argv list.
+# If multiple rules match, the first match wins.
+#
+# Actions (typical): "allow", "ask", "deny"
+
+# --- Safe read-only Git ---
+prefix_rule(pattern=["git", "status"], decision="allow")
+prefix_rule(pattern=["git", "diff"], decision="allow")
+prefix_rule(pattern=["git", "log"], decision="allow")
+prefix_rule(pattern=["git", "show"], decision="allow")
+prefix_rule(pattern=["git", "rev-parse"], decision="allow")
+prefix_rule(pattern=["git", "ls-files"], decision="allow")
+
+# --- Repo skill runners (Windows) ---
+# Python entrypoints
+prefix_rule(
+  pattern=[".\\.venv\\Scripts\\python.exe", "90_System\\Skills\\gcal_today\\gcal_today.py"],
+  decision="allow",
+)
+prefix_rule(
+  pattern=[".\\.venv\\Scripts\\python.exe", "90_System\\Skills\\daily_brief_todoist\\daily_brief_todoist.py"],
+  decision="allow",
+)
+prefix_rule(
+  pattern=[".\\.venv\\Scripts\\python.exe", "90_System\\Skills\\fireflies_sync\\fireflies_sync.py"],
+  decision="allow",
+)
+prefix_rule(
+  pattern=[".\\.venv\\Scripts\\python.exe", "90_System\\Skills\\create_links\\create_links.py"],
+  decision="allow",
+)
+prefix_rule(
+  pattern=[".\\.venv\\Scripts\\python.exe", "90_System\\Skills\\Web_Daily_Brief\\web_daily_brief.py"],
+  decision="allow",
+)
+prefix_rule(
+  pattern=[".\\.venv\\Scripts\\python.exe", "90_System\\Skills\\git_submodules_pull\\git_submodules_pull.py"],
+  decision="allow",
+)
+
+# PowerShell helper for submodules
+prefix_rule(
+  pattern=["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "90_System\\Skills\\git_submodules_pull\\git_submodules_pull.ps1"],
+  decision="allow",
+)
+
+# --- Guardrails (deny common destructive patterns) ---

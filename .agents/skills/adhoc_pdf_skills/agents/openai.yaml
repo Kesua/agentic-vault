@@ -1,0 +1,5 @@
+interface:
+  display_name: "PDF Skills"
+  short_description: "Create, edit, and review PDFs for this vault"
+  icon_large: "./assets/pdf.png"
+  default_prompt: "Use $adhoc_pdf_skills to create, edit, or review a PDF. If editing an existing source file, copy it into `70_Exports/YYYY/MM/DD/`, modify only the exported copy, and return the exported path plus a concise summary."

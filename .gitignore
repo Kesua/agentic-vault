@@ -1,0 +1,21 @@
+# Attachments that can get large
+_attachments/audio/
+_attachments/video/
+
+# Exports (often large)
+70_Exports/
+
+# Obsidian local settings (keep if you prefer; delete this line if you want it versioned)
+.obsidian/
+
+# Automation secrets (local only)
+90_System/secrets/
+90_System/Logs/
+90_System/Integrations/telegram_bridge/runtime/
+90_System/Integrations/slack/runtime/
+90_System/Integrations/slack/workspaces.json
+
+.venv/
+.venv_gcal/
+.obsidian/
+.claude/settings.local.json

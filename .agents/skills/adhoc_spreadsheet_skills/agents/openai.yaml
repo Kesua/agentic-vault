@@ -1,0 +1,6 @@
+interface:
+  display_name: "Spreadsheet Skills"
+  short_description: "Create, edit, and analyze spreadsheets for this vault"
+  icon_small: "./assets/spreadsheet-small.svg"
+  icon_large: "./assets/spreadsheet.png"
+  default_prompt: "Use $adhoc_spreadsheet_skills to create or update a spreadsheet with the right formulas, structure, and formatting. If editing an existing source file, copy it into `70_Exports/YYYY/MM/DD/`, modify only the exported copy, and return the exported path plus a concise summary."

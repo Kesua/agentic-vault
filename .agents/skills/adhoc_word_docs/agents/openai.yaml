@@ -1,0 +1,6 @@
+interface:
+  display_name: "Word Docs"
+  short_description: "Edit and review Word documents for this vault"
+  icon_small: "./assets/doc-small.svg"
+  icon_large: "./assets/doc.png"
+  default_prompt: "Use $adhoc_word_docs to create, edit, or review a .docx file. If editing an existing source file, copy it into `70_Exports/YYYY/MM/DD/`, modify only the exported copy, and return the exported path plus a concise change summary."
