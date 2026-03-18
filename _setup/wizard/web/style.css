@@ -1,0 +1,481 @@
+/* ================================================================
+   Agentic Vault Setup Wizard -- Design Tokens & Layout
+   ================================================================ */
+
+:root {
+    --color-bg: #f5f5f7;
+    --color-surface: #ffffff;
+    --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+    --color-success: #16a34a;
+    --color-error: #dc2626;
+    --color-warning: #d97706;
+    --color-text: #1e293b;
+    --color-text-muted: #64748b;
+    --color-border: #e2e8f0;
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Helvetica, Arial, sans-serif;
+    --max-width: 640px;
+}
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-stack);
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ----------------------------------------------------------------
+   Header + Progress Bar
+   ---------------------------------------------------------------- */
+
+.wizard-header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: 16px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.wizard-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.progress-bar {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.progress-step {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-border);
+    transition: background 0.3s ease;
+}
+
+.progress-step.completed {
+    background: var(--color-success);
+}
+
+.progress-step.current {
+    background: var(--color-primary);
+}
+
+/* ----------------------------------------------------------------
+   Main Content Area
+   ---------------------------------------------------------------- */
+
+.wizard-main {
+    max-width: var(--max-width);
+    margin: 0 auto;
+    padding: 32px 16px;
+}
+
+/* ----------------------------------------------------------------
+   Cards
+   ---------------------------------------------------------------- */
+
+.card {
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    padding: 32px;
+    margin-bottom: 24px;
+}
+
+.card h2 {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.card h3 {
+    font-size: 18px;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+
+.step-counter {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--color-text-muted);
+}
+
+/* ----------------------------------------------------------------
+   Buttons
+   ---------------------------------------------------------------- */
+
+.btn-primary,
+.btn-secondary {
+    display: inline-block;
+    padding: 10px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    margin-top: 16px;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--color-primary-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+}
+
+.btn-secondary:hover {
+    background: rgba(37, 99, 235, 0.06);
+}
+
+.btn-link {
+    display: inline-block;
+    color: var(--color-primary);
+    text-decoration: underline;
+    margin-top: 8px;
+    font-size: 15px;
+}
+
+/* ----------------------------------------------------------------
+   Form Elements
+   ---------------------------------------------------------------- */
+
+.form-group {
+    margin-top: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+    font-family: var(--font-stack);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-field.error {
+    border-color: var(--color-error);
+}
+
+.field-error {
+    color: var(--color-error);
+    font-size: 13px;
+    margin-top: 4px;
+    min-height: 18px;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* ----------------------------------------------------------------
+   Service Picker
+   ---------------------------------------------------------------- */
+
+.service-list {
+    margin: 16px 0;
+}
+
+.service-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.service-option:hover {
+    border-color: var(--color-primary);
+}
+
+.service-option input[type="checkbox"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.service-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.service-name {
+    font-weight: 500;
+}
+
+.service-desc {
+    display: block;
+    width: 100%;
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge.recommended {
+    background: #dcfce7;
+    color: var(--color-success);
+}
+
+.badge.advanced {
+    background: #fef3c7;
+    color: var(--color-warning);
+}
+
+/* ----------------------------------------------------------------
+   Status Grid (Summary Screen)
+   ---------------------------------------------------------------- */
+
+.status-grid {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-badge.connected {
+    background: #dcfce7;
+    color: var(--color-success);
+}
+
+.status-badge.not-connected {
+    background: #fef2f2;
+    color: var(--color-error);
+}
+
+.status-badge.skipped {
+    background: #f1f5f9;
+    color: var(--color-text-muted);
+}
+
+/* ----------------------------------------------------------------
+   Result Messages
+   ---------------------------------------------------------------- */
+
+.result-message {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+.result-message:empty {
+    display: none;
+}
+
+.result-message.success {
+    background: #dcfce7;
+    color: var(--color-success);
+}
+
+.result-message.error {
+    background: #fef2f2;
+    color: var(--color-error);
+}
+
+/* ----------------------------------------------------------------
+   Upload Zone
+   ---------------------------------------------------------------- */
+
+.upload-zone {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    margin-top: 16px;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: var(--color-primary);
+    background: #eff6ff;
+}
+
+/* ----------------------------------------------------------------
+   ID Display (Telegram)
+   ---------------------------------------------------------------- */
+
+.id-display {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 12px 0;
+    padding: 12px;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+/* ----------------------------------------------------------------
+   Code Block (for Slack manifest)
+   ---------------------------------------------------------------- */
+
+.code-block {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    font-family: "Fira Code", Consolas, "Courier New", monospace;
+    font-size: 13px;
+    overflow-x: auto;
+    margin-top: 12px;
+    white-space: pre;
+    line-height: 1.5;
+}
+
+/* ----------------------------------------------------------------
+   Misc
+   ---------------------------------------------------------------- */
+
+.muted {
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.help-text {
+    color: var(--color-text-muted);
+    font-size: 13px;
+}
+
+.instructions ol {
+    margin-left: 20px;
+    margin-top: 8px;
+}
+
+.instructions li {
+    margin-bottom: 4px;
+}
+
+.next-steps ol {
+    margin-left: 20px;
+    margin-top: 8px;
+}
+
+.next-steps li {
+    margin-bottom: 4px;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+/* ----------------------------------------------------------------
+   Loading spinner (used while API calls are in flight)
+   ---------------------------------------------------------------- */
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ----------------------------------------------------------------
+   Responsive
+   ---------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+    .card {
+        padding: 20px;
+    }
+
+    .wizard-main {
+        padding: 16px 8px;
+    }
+
+    .card h2 {
+        font-size: 20px;
+    }
+}

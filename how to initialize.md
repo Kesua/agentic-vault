@@ -103,6 +103,31 @@ Never paste tokens into:
 - `app_info.txt`
 - Git commits
 
+## Quick start (recommended)
+
+The fastest way to set up is the automated setup wizard.
+
+- **Windows:** double-click `Setup_Windows.bat` in the vault folder
+- **Mac:** double-click `Setup_Mac.command` in the vault folder
+
+The script installs Python if needed, creates the virtual environment, installs
+dependencies, and opens a browser-based wizard that walks you through connecting
+each service.
+
+> **Mac note (ZIP downloads):** if macOS says "permission denied" when you
+> double-click `Setup_Mac.command`, open Terminal once and run:
+>
+> ```bash
+> chmod +x Setup_Mac.command _setup/bootstrap_mac.sh
+> ```
+>
+> Then double-click again. This is only needed when the vault was downloaded as
+> a ZIP rather than cloned with Git.
+
+If you prefer to set things up manually, continue with the steps below.
+
+---
+
 ## Step 1: Install the two apps you need
 
 Please install:

@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agentic Vault Setup</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="wizard-header">
+        <h1>Agentic Vault</h1>
+        <div class="progress-bar" id="progress-bar"></div>
+    </header>
+
+    <main class="wizard-main">
+
+        <!-- Screen 1: Welcome -->
+        <section class="screen" id="screen-welcome">
+            <div class="card">
+                <h2>Welcome to Agentic Vault Setup</h2>
+                <p>This wizard will help you connect the services your vault uses.</p>
+                <p class="muted">Estimated time: about 15 minutes for the recommended setup.</p>
+                <button class="btn-primary" onclick="App.goTo('service-picker')">Let's Start</button>
+            </div>
+        </section>
+
+        <!-- Screen 2: Service Picker -->
+        <section class="screen" id="screen-service-picker" hidden>
+            <div class="card">
+                <h2>Choose Your Services</h2>
+                <p>Select which services to connect. You can always add more later.</p>
+                <div class="service-list">
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="google" checked>
+                        <div class="service-info">
+                            <span class="service-name">Google Calendar + Gmail</span>
+                            <span class="badge recommended">recommended</span>
+                            <span class="service-desc">Sync meetings and process emails</span>
+                        </div>
+                    </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="todoist" checked>
+                        <div class="service-info">
+                            <span class="service-name">Todoist</span>
+                            <span class="badge recommended">recommended</span>
+                            <span class="service-desc">Sync tasks into daily briefs</span>
+                        </div>
+                    </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="telegram" checked>
+                        <div class="service-info">
+                            <span class="service-name">Telegram Bridge</span>
+                            <span class="badge recommended">recommended</span>
+                            <span class="service-desc">Chat with your vault from Telegram</span>
+                        </div>
+                    </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="fireflies">
+                        <div class="service-info">
+                            <span class="service-name">Fireflies</span>
+                            <span class="service-desc">Auto-attach meeting transcripts</span>
+                        </div>
+                    </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="clockify">
+                        <div class="service-info">
+                            <span class="service-name">Clockify</span>
+                            <span class="service-desc">Track and query time entries</span>
+                        </div>
+                    </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="slack">
+                        <div class="service-info">
+                            <span class="service-name">Slack</span>
+                            <span class="badge advanced">advanced</span>
+                            <span class="service-desc">Read and summarize Slack channels</span>
+                        </div>
+                    </label>
+                </div>
+                <button class="btn-primary" onclick="App.confirmServices()">Continue with Selected Services</button>
+            </div>
+        </section>
+
+        <!-- Screen 3: Google Cloud Project Setup (6 micro-steps) -->
+        <section class="screen" id="screen-google" hidden>
+            <div class="card" id="google-step-1">
+                <h2>Google Setup <span class="step-counter">(Step 1 of 6)</span></h2>
+                <h3>Create a Google Cloud Project</h3>
+                <p>Open the link below and create a new project. Name it anything (e.g. "My Vault").</p>
+                <a href="https://console.cloud.google.com/projectcreate" target="_blank" class="btn-link">Open Google Cloud Console</a>
+                <br>
+                <button class="btn-primary" onclick="App.googleStep(2)">Done, Next</button>
+            </div>
+            <div class="card" id="google-step-2" hidden>
+                <h2>Google Setup <span class="step-counter">(Step 2 of 6)</span></h2>
+                <h3>Enable Calendar API</h3>
+                <p>Click the link, make sure your new project is selected at the top, then click "Enable".</p>
+                <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" class="btn-link">Enable Calendar API</a>
+                <br>
+                <button class="btn-primary" onclick="App.googleStep(3)">Done, Next</button>
+            </div>
+            <div class="card" id="google-step-3" hidden>
+                <h2>Google Setup <span class="step-counter">(Step 3 of 6)</span></h2>
+                <h3>Enable Gmail API</h3>
+                <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" class="btn-link">Enable Gmail API</a>
+                <br>
+                <button class="btn-primary" onclick="App.googleStep(4)">Done, Next</button>
+            </div>
+            <div class="card" id="google-step-4" hidden>
+                <h2>Google Setup <span class="step-counter">(Step 4 of 6)</span></h2>
+                <h3>Configure OAuth Consent Screen</h3>
+                <ol>
+                    <li>Open the link below</li>
+                    <li>Choose "External" user type</li>
+                    <li>Fill in app name and support email</li>
+                    <li>Under "Test users", add your own Google email(s)</li>
+                    <li>Save</li>
+                </ol>
+                <a href="https://console.cloud.google.com/auth/overview" target="_blank" class="btn-link">Open OAuth Consent Screen</a>
+                <br>
+                <button class="btn-primary" onclick="App.googleStep(5)">Done, Next</button>
+            </div>
+            <div class="card" id="google-step-5" hidden>
+                <h2>Google Setup <span class="step-counter">(Step 5 of 6)</span></h2>
+                <h3>Create OAuth Client Credentials</h3>
+                <ol>
+                    <li>Open the Credentials page</li>
+                    <li>Click "Create Credentials" &gt; "OAuth client ID"</li>
+                    <li>Application type: <strong>Desktop app</strong></li>
+                    <li>Click "Create"</li>
+                    <li>Click "Download JSON"</li>
+                </ol>
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn-link">Open Credentials Page</a>
+                <br>
+                <button class="btn-primary" onclick="App.googleStep(6)">Done, Next</button>
+            </div>
+            <div class="card" id="google-step-6" hidden>
+                <h2>Google Setup <span class="step-counter">(Step 6 of 6)</span></h2>
+                <h3>Upload the Downloaded JSON File</h3>
+                <div class="upload-zone" id="google-upload-zone">
+                    <p>Drag and drop the JSON file here, or click to browse</p>
+                    <input type="file" id="google-file-input" accept=".json" hidden>
+                </div>
+                <div id="google-upload-status"></div>
+
+                <div id="google-accounts-section" hidden>
+                    <h3>How many Google accounts do you use?</h3>
+                    <div class="radio-group">
+                        <label><input type="radio" name="google-accounts" value="1" checked> One account</label>
+                        <label><input type="radio" name="google-accounts" value="2"> Two accounts (private + personal)</label>
+                    </div>
+                    <div id="google-signin-buttons"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 4: Todoist -->
+        <section class="screen" id="screen-todoist" hidden>
+            <div class="card">
+                <h2>Connect Todoist</h2>
+                <p>Copy your API token from Todoist's integration settings.</p>
+                <a href="https://app.todoist.com/app/settings/integrations/developer" target="_blank" class="btn-link">Open Todoist Settings</a>
+                <div class="form-group">
+                    <label for="todoist-token">API Token</label>
+                    <input type="text" id="todoist-token" placeholder="Paste your Todoist API token" class="input-field">
+                    <div class="field-error" id="todoist-error"></div>
+                </div>
+                <button class="btn-primary" onclick="App.saveTodoist()">Verify and Save</button>
+                <div class="result-message" id="todoist-result"></div>
+            </div>
+        </section>
+
+        <!-- Screen 5: Telegram -->
+        <section class="screen" id="screen-telegram" hidden>
+            <div class="card">
+                <h2>Connect Telegram Bridge</h2>
+                <div class="instructions">
+                    <h3>Create a Telegram Bot</h3>
+                    <ol>
+                        <li>Open Telegram and search for <strong>@BotFather</strong></li>
+                        <li>Send <code>/newbot</code></li>
+                        <li>Choose a name and username for your bot</li>
+                        <li>Copy the token BotFather gives you</li>
+                    </ol>
+                </div>
+                <div class="form-group">
+                    <label for="telegram-token">Bot Token</label>
+                    <input type="text" id="telegram-token" placeholder="123456789:ABCdef..." class="input-field">
+                    <div class="field-error" id="telegram-token-error"></div>
+                </div>
+                <button class="btn-secondary" onclick="App.verifyTelegramToken()">Verify Token</button>
+
+                <div id="telegram-verified" hidden>
+                    <div class="result-message success" id="telegram-bot-info"></div>
+                    <div class="instructions">
+                        <h3>Detect Your IDs</h3>
+                        <p>Send any message (e.g. <code>/start</code>) to your bot in Telegram, then click the button below.</p>
+                    </div>
+                    <button class="btn-secondary" onclick="App.detectTelegramIds()">Detect My ID</button>
+                    <div id="telegram-ids" hidden>
+                        <div class="id-display">
+                            <span>User ID: <strong id="telegram-user-id"></strong></span>
+                            <span>Chat ID: <strong id="telegram-chat-id"></strong></span>
+                        </div>
+                        <button class="btn-primary" onclick="App.saveTelegram()">Save Configuration</button>
+                    </div>
+                    <div class="result-message" id="telegram-result"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 6: Fireflies -->
+        <section class="screen" id="screen-fireflies" hidden>
+            <div class="card">
+                <h2>Connect Fireflies</h2>
+                <a href="https://app.fireflies.ai/integrations/custom/fireflies" target="_blank" class="btn-link">Open Fireflies Settings</a>
+                <div class="form-group">
+                    <label for="fireflies-key">API Key</label>
+                    <input type="text" id="fireflies-key" placeholder="Paste your Fireflies API key" class="input-field">
+                    <div class="field-error" id="fireflies-error"></div>
+                </div>
+                <button class="btn-primary" onclick="App.saveFireflies()">Verify and Save</button>
+                <div class="result-message" id="fireflies-result"></div>
+            </div>
+        </section>
+
+        <!-- Screen 7: Clockify -->
+        <section class="screen" id="screen-clockify" hidden>
+            <div class="card">
+                <h2>Connect Clockify</h2>
+                <a href="https://app.clockify.me/user/preferences#advanced" target="_blank" class="btn-link">Open Clockify API Keys</a>
+                <div class="form-group">
+                    <label for="clockify-key">API Key</label>
+                    <input type="text" id="clockify-key" placeholder="Paste your Clockify API key" class="input-field">
+                    <div class="field-error" id="clockify-error"></div>
+                </div>
+                <button class="btn-primary" onclick="App.saveClockify()">Verify and Save</button>
+                <div class="result-message" id="clockify-result"></div>
+            </div>
+        </section>
+
+        <!-- Screen 8: Slack (multi-step) -->
+        <section class="screen" id="screen-slack" hidden>
+            <div class="card">
+                <h2>Connect Slack</h2>
+
+                <div id="slack-step-1">
+                    <h3>Step 1: Create a Slack App</h3>
+                    <ol>
+                        <li>Open <a href="https://api.slack.com/apps" target="_blank">Slack App Management</a></li>
+                        <li>Click "Create New App" &gt; "From an app manifest"</li>
+                        <li>Pick your workspace</li>
+                        <li>Paste this YAML manifest:</li>
+                    </ol>
+                    <pre class="code-block" id="slack-manifest-code">display_information:
+  name: Vault Slack Read
+features:
+  bot_user:
+    display_name: Vault Slack Read
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:history
+      - channels:read
+      - groups:history
+      - groups:read
+      - im:history
+      - im:read
+      - mpim:history
+      - mpim:read
+      - users:read
+      - users:read.email
+      - chat:write
+      - chat:write.public
+      - im:write
+      - mpim:write
+      - users:read
+settings:
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: true</pre>
+                    <button class="btn-secondary" onclick="App.copyManifest()">Copy Manifest</button>
+                    <button class="btn-primary" onclick="App.slackStep(2)">Done, Next</button>
+                </div>
+
+                <div id="slack-step-2" hidden>
+                    <h3>Step 2: Install to Workspace</h3>
+                    <p>In the app settings, go to "OAuth &amp; Permissions" and click "Install to Workspace". Approve the requested permissions.</p>
+                    <button class="btn-primary" onclick="App.slackStep(3)">Done, Next</button>
+                </div>
+
+                <div id="slack-step-3" hidden>
+                    <h3>Step 3: Paste Bot Token</h3>
+                    <p>After installing, copy the "Bot User OAuth Token" from the OAuth page.</p>
+                    <div class="form-group">
+                        <label for="slack-token">Bot User OAuth Token</label>
+                        <input type="text" id="slack-token" placeholder="xoxe.xoxb-..." class="input-field">
+                        <div class="field-error" id="slack-token-error"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="slack-alias">Workspace Alias</label>
+                        <input type="text" id="slack-alias" value="private" class="input-field">
+                        <span class="help-text">A short name for this workspace (e.g. "private", "work")</span>
+                    </div>
+                    <button class="btn-secondary" onclick="App.testSlack()">Verify Connection</button>
+                    <div class="result-message" id="slack-test-result"></div>
+                </div>
+
+                <div id="slack-step-4" hidden>
+                    <h3>Step 4: Choose Channels</h3>
+                    <p>Select which conversations the vault should be allowed to read.</p>
+                    <button class="btn-secondary" onclick="App.loadSlackChannels()">Load My Channels</button>
+                    <div id="slack-channel-list"></div>
+                    <button class="btn-primary" onclick="App.saveSlackConfig()">Save Slack Configuration</button>
+                    <div class="result-message" id="slack-config-result"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Screen 9: Summary / Dashboard -->
+        <section class="screen" id="screen-summary" hidden>
+            <div class="card">
+                <h2>Setup Complete</h2>
+                <div class="status-grid" id="status-grid"></div>
+                <div class="next-steps">
+                    <h3>What to do next</h3>
+                    <ol>
+                        <li>Open <strong>Obsidian</strong></li>
+                        <li>Choose "Open folder as vault"</li>
+                        <li>Select: <code id="vault-path"></code></li>
+                    </ol>
+                </div>
+                <p class="muted">You can re-run this wizard anytime by double-clicking the Setup file.</p>
+                <button class="btn-secondary" onclick="App.shutdown()">Close Wizard</button>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

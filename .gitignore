@@ -17,5 +17,11 @@ _attachments/video/
 
 .venv/
 .venv_gcal/
+
+# Build output
+dist/
+
+# Wizard state (local progress, no secrets)
+_setup/wizard_state.json
 .obsidian/
 .claude/settings.local.json

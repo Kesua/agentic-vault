@@ -1,0 +1,34 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build distribution ZIP
+        run: bash .github/scripts/build-zip.sh
+
+      - name: Publish to latest release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: latest
+          name: "Latest Release"
+          body: |
+            Automatically built from the latest commit on main.
+
+            **Download:** `agentic-vault.zip`, extract, and double-click
+            `Setup_Windows.bat` (Windows) or `Setup_Mac.command` (Mac).
+          artifacts: "dist/agentic-vault.zip"
+          allowUpdates: true
+          removeArtifacts: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
