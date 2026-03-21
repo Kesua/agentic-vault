@@ -17,6 +17,7 @@ MIN_PYTHON_MINOR=9
 VENV_DIR=".venv"
 SECRETS_DIR="90_System/secrets"
 WIZARD_SCRIPT="_setup/wizard/server.py"
+WIZARD_MODULE="_setup.wizard.server"
 PYTHON_CMD=""
 
 # ---------------------------------------------------------------------------
@@ -163,4 +164,4 @@ echo "  --------------------------------------------"
 echo ""
 
 # Run wizard in foreground; server.py opens the browser via webbrowser.open()
-"$VENV_DIR/bin/python" "$WIZARD_SCRIPT"
+"$VENV_DIR/bin/python" -m "$WIZARD_MODULE"

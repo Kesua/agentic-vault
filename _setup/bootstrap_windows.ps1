@@ -13,6 +13,7 @@ $MIN_PYTHON_MINOR = 9
 $VENV_DIR         = ".venv"
 $SECRETS_DIR      = "90_System\secrets"
 $WIZARD_SCRIPT    = "_setup\wizard\server.py"
+$WIZARD_MODULE    = "_setup.wizard.server"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -83,7 +84,9 @@ if ($null -eq $PYTHON_CMD) {
     $wingetAvailable = Get-Command winget -ErrorAction SilentlyContinue
     if ($wingetAvailable) {
         Write-Host "         Python not found. Installing via winget..."
+        $ErrorActionPreference = "Continue"
         winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements --silent 2>&1 | Out-Null
+        $ErrorActionPreference = "Stop"
 
         # Refresh PATH so the new install is visible
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
@@ -157,7 +160,9 @@ Write-Host "  [3/5] Installing dependencies (this may take a minute)..."
 
 $PIP = Join-Path $VENV_DIR "Scripts\pip.exe"
 
+$ErrorActionPreference = "Continue"
 & $PIP install -r requirements.txt --quiet 2>&1 | Out-Null
+$ErrorActionPreference = "Stop"
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "  ERROR: Some packages failed to install."
@@ -169,7 +174,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 try {
+    $ErrorActionPreference = "Continue"
     $pkgCount = (& $PIP list --format=columns 2>&1 | Measure-Object -Line).Lines - 2
+    $ErrorActionPreference = "Stop"
     if ($pkgCount -lt 0) { $pkgCount = 0 }
 } catch { $pkgCount = "?" }
 Write-Host "         Installed $pkgCount packages"
@@ -209,4 +216,4 @@ Write-Host "  --------------------------------------------"
 Write-Host ""
 
 # Run wizard in foreground; server.py opens the browser via webbrowser.open()
-& $VENV_PYTHON $WIZARD_SCRIPT
+& $VENV_PYTHON -m $WIZARD_MODULE
