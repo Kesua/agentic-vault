@@ -17,18 +17,32 @@ jobs:
       - name: Build distribution ZIP
         run: bash .github/scripts/build-zip.sh
 
-      - name: Publish to latest release
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          RELEASE_TAG="main-${GITHUB_RUN_ID}-${SHORT_SHA}"
+          ZIP_NAME="agentic-vault-${RELEASE_TAG}.zip"
+          cp "dist/agentic-vault.zip" "dist/${ZIP_NAME}"
+          echo "tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "zip_name=${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "zip_path=dist/${ZIP_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish a new release
         uses: ncipollo/release-action@v1
         with:
-          tag: latest
-          name: "Latest Release"
+          tag: ${{ steps.meta.outputs.tag }}
+          name: "Release ${{ steps.meta.outputs.tag }}"
           body: |
             Automatically built from the latest commit on main.
+            Commit: `${{ steps.meta.outputs.short_sha }}`
 
-            **Download:** `agentic-vault.zip`, extract, and double-click
+            **Download:** `${{ steps.meta.outputs.zip_name }}`, extract, and double-click
             `Setup_Windows.bat` (Windows) or `Setup_Mac.command` (Mac).
-          artifacts: "dist/agentic-vault.zip"
-          allowUpdates: true
-          removeArtifacts: true
+          artifacts: ${{ steps.meta.outputs.zip_path }}
+          allowUpdates: false
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
