@@ -20,7 +20,13 @@
                 <h2>Welcome to Agentic Vault Setup</h2>
                 <p>This wizard will help you connect the services your vault uses.</p>
                 <p class="muted">Estimated time: about 15 minutes for the recommended setup.</p>
-                <button class="btn-primary" onclick="App.goTo('service-picker')">Let's Start</button>
+                <div class="instructions" id="assistant-setup" hidden>
+                    <h3>Agent CLI Check</h3>
+                    <p id="assistant-status"></p>
+                    <button class="btn-secondary" id="assistant-install-btn" onclick="App.installAssistant()" hidden>Install Required Assistant</button>
+                    <div class="result-message" id="assistant-install-result"></div>
+                </div>
+                <button class="btn-primary" id="welcome-start-btn" onclick="App.goTo('service-picker')">Let's Start</button>
             </div>
         </section>
 
@@ -332,6 +338,12 @@ settings:
                         <li>Choose "Open folder as vault"</li>
                         <li>Select: <code id="vault-path"></code></li>
                     </ol>
+                </div>
+                <div class="next-steps" id="assistant-try" hidden>
+                    <h3>Try it now</h3>
+                    <p>If you want, start a coding assistant session directly in this vault.</p>
+                    <div id="assistant-launch-buttons"></div>
+                    <div class="result-message" id="assistant-launch-result"></div>
                 </div>
                 <p class="muted">You can re-run this wizard anytime by double-clicking the Setup file.</p>
                 <button class="btn-secondary" onclick="App.shutdown()">Close Wizard</button>

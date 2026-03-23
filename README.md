@@ -17,8 +17,8 @@ A reusable, Obsidian-friendly vault skeleton for personal operating systems with
 
 ## First setup
 
-1. Open the vault in Obsidian.
-2. Review and customize `AGENTS.md`, `SOUL.md`, `MEMORY.md`, and `60_SOPs/_HowIWork.md`.
-3. Add your own secrets and OAuth files under `90_System/secrets/` without committing them.
-4. Install Python dependencies from `requirements.txt` into a local virtual environment.
+1. Run `Setup_Windows.bat` on Windows or `Setup_Mac.command` on macOS.
+2. The setup wizard checks whether OpenAI Codex or Claude Code is already installed.
+3. If neither is available, the wizard installs OpenAI Codex for you.
+4. Review and customize `AGENTS.md`, `SOUL.md`, `MEMORY.md`, and `60_SOPs/_HowIWork.md`.
 5. Adjust `.codex/config.toml` if you want this vault to work with additional external repos.

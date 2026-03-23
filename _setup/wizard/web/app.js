@@ -8,6 +8,7 @@ const App = {
     serviceQueue: [],
     serviceIndex: 0,
     state: {},
+    assistantStatus: null,
 
     slackTeamId: "",
     slackUserId: "",
@@ -23,6 +24,7 @@ const App = {
         } catch (_) {
             /* server may not be ready yet */
         }
+        await this.refreshAssistantStatus();
         this.renderProgress();
     },
 
@@ -75,6 +77,13 @@ const App = {
        ---------------------------------------------------------------- */
 
     confirmServices() {
+        if (
+            this.assistantStatus &&
+            this.assistantStatus.supported &&
+            !this.assistantStatus.installed_any
+        ) {
+            return;
+        }
         const checks = document.querySelectorAll(
             'input[name="service"]:checked'
         );
@@ -88,6 +97,86 @@ const App = {
         } else {
             this.goTo("summary");
             this.loadSummary();
+        }
+    },
+
+    async refreshAssistantStatus() {
+        try {
+            this.assistantStatus = await this.api("GET", "/api/assistant/status");
+        } catch (_) {
+            this.assistantStatus = null;
+        }
+        this.renderAssistantStatus();
+    },
+
+    renderAssistantStatus(message, isError) {
+        var box = document.getElementById("assistant-setup");
+        var statusEl = document.getElementById("assistant-status");
+        var resultEl = document.getElementById("assistant-install-result");
+        var installBtn = document.getElementById("assistant-install-btn");
+        var startBtn = document.getElementById("welcome-start-btn");
+
+        if (!box || !statusEl || !resultEl || !installBtn || !startBtn) {
+            return;
+        }
+
+        if (!this.assistantStatus || !this.assistantStatus.supported) {
+            box.hidden = true;
+            startBtn.disabled = false;
+            return;
+        }
+
+        box.hidden = false;
+        var assistants = this.assistantStatus.assistants || [];
+        var installed = assistants.filter(function (item) {
+            return item.installed;
+        });
+
+        if (installed.length) {
+            statusEl.innerHTML =
+                "<strong>Coding assistant ready.</strong> " +
+                installed.map(function (item) {
+                    return item.label;
+                }).join(" / ") +
+                " is installed on this machine.";
+            installBtn.hidden = true;
+            startBtn.disabled = false;
+        } else {
+            statusEl.innerHTML =
+                "<strong>Coding assistant required.</strong> " +
+                "This setup will install OpenAI Codex if neither Codex nor Claude Code is already available.";
+            installBtn.hidden = false;
+            startBtn.disabled = true;
+        }
+
+        if (message) {
+            resultEl.textContent = message;
+            resultEl.className =
+                "result-message " + (isError ? "error" : "success");
+        } else if (!installed.length) {
+            resultEl.textContent = "";
+            resultEl.className = "result-message";
+        }
+    },
+
+    async installAssistant() {
+        var installBtn = document.getElementById("assistant-install-btn");
+        if (installBtn) {
+            installBtn.disabled = true;
+            installBtn.textContent = "Installing...";
+        }
+        this.renderAssistantStatus("Installing OpenAI Codex. This can take a minute.", false);
+        try {
+            var resp = await this.api("POST", "/api/assistant/install", {});
+            this.assistantStatus = resp.status || (await this.api("GET", "/api/assistant/status"));
+            this.renderAssistantStatus(resp.message, !resp.ok);
+        } catch (err) {
+            this.renderAssistantStatus(err.message, true);
+        } finally {
+            if (installBtn) {
+                installBtn.disabled = false;
+                installBtn.textContent = "Install Required Assistant";
+            }
         }
     },
 
@@ -618,9 +707,11 @@ const App = {
             var resp = await this.api("GET", "/api/status");
             var prereqs = await this.api("GET", "/api/prerequisites");
             this.state = resp;
+            this.assistantStatus = prereqs.assistant || this.assistantStatus;
 
             var grid = document.getElementById("status-grid");
             var services = [
+                { key: "__assistant__", name: "Coding Assistant" },
                 { key: "gcal_private_authed", name: "Google Calendar" },
                 { key: "gmail_private_authed", name: "Gmail" },
                 { key: "todoist_connected", name: "Todoist" },
@@ -633,12 +724,25 @@ const App = {
             var selected = this.selectedServices;
             grid.innerHTML = services
                 .map(function (s) {
-                    var connected = resp[s.key];
-                    var svcKey = s.name.toLowerCase().split(" ")[0];
-                    var isSelected = selected.indexOf(svcKey) !== -1;
+                    var connected = s.key === "__assistant__"
+                        ? prereqs.assistant && prereqs.assistant.installed_any
+                        : resp[s.key];
+                    var svcKey = s.key === "__assistant__"
+                        ? "__assistant__"
+                        : s.name.toLowerCase().split(" ")[0];
+                    var isSelected = s.key === "__assistant__"
+                        ? true
+                        : selected.indexOf(svcKey) !== -1;
                     var badge, cls;
                     if (connected) {
-                        badge = "Connected";
+                        if (s.key === "__assistant__" && prereqs.assistant) {
+                            var names = prereqs.assistant.assistants
+                                .filter(function (item) { return item.installed; })
+                                .map(function (item) { return item.label; });
+                            badge = names.join(" / ") || "Connected";
+                        } else {
+                            badge = "Connected";
+                        }
                         cls = "connected";
                     } else if (!isSelected) {
                         badge = "Skipped";
@@ -659,8 +763,63 @@ const App = {
 
             document.getElementById("vault-path").textContent =
                 prereqs.repo_root;
+            this.renderTryAssistant();
         } catch (_) {
             /* best-effort */
+        }
+    },
+
+    renderTryAssistant(message, isError) {
+        var wrap = document.getElementById("assistant-try");
+        var buttons = document.getElementById("assistant-launch-buttons");
+        var result = document.getElementById("assistant-launch-result");
+        if (!wrap || !buttons || !result) {
+            return;
+        }
+        if (!this.assistantStatus || !this.assistantStatus.supported) {
+            wrap.hidden = true;
+            return;
+        }
+
+        var installed = (this.assistantStatus.assistants || []).filter(function (item) {
+            return item.installed;
+        });
+        wrap.hidden = !installed.length;
+        if (!installed.length) {
+            return;
+        }
+
+        buttons.innerHTML = installed
+            .map(function (item) {
+                return (
+                    "<button class=\"btn-primary\" onclick=\"App.launchAssistant('" +
+                    item.key +
+                    "')\">Try " +
+                    item.label +
+                    "</button>"
+                );
+            })
+            .join(" ");
+
+        if (message) {
+            result.textContent = message;
+            result.className =
+                "result-message " + (isError ? "error" : "success");
+        } else {
+            result.textContent = "";
+            result.className = "result-message";
+        }
+    },
+
+    async launchAssistant(key) {
+        this.renderTryAssistant("Starting assistant session...", false);
+        try {
+            var resp = await this.api("POST", "/api/assistant/launch", {
+                assistant: key,
+            });
+            this.renderTryAssistant(resp.message, !resp.ok);
+        } catch (err) {
+            this.renderTryAssistant(err.message, true);
         }
     },
 

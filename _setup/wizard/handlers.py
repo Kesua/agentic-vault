@@ -8,7 +8,7 @@ import sys
 import threading
 from pathlib import Path
 
-from . import google_auth_helper, state, validators
+from . import agent_cli, google_auth_helper, state, validators
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SECRETS_DIR = REPO_ROOT / "90_System" / "secrets"
@@ -19,6 +19,9 @@ def register_routes(routes: dict) -> None:
     """Populate the route table used by server.py."""
     routes["GET /api/status"] = handle_status
     routes["GET /api/prerequisites"] = handle_prerequisites
+    routes["GET /api/assistant/status"] = handle_assistant_status
+    routes["POST /api/assistant/install"] = handle_assistant_install
+    routes["POST /api/assistant/launch"] = handle_assistant_launch
     routes["POST /api/google/upload-credentials"] = handle_google_upload
     routes["POST /api/google/start-auth"] = handle_google_start_auth
     routes["GET /api/google/auth-status"] = handle_google_auth_status
@@ -53,7 +56,21 @@ def handle_prerequisites(_body, _headers) -> dict:
         "venv_exists": venv_python.exists(),
         "secrets_dir_exists": SECRETS_DIR.exists(),
         "repo_root": str(REPO_ROOT),
+        "assistant": agent_cli.detect(),
     }
+
+
+def handle_assistant_status(_body, _headers) -> dict:
+    return agent_cli.detect()
+
+
+def handle_assistant_install(_body, _headers) -> dict:
+    return agent_cli.install_default()
+
+
+def handle_assistant_launch(body, _headers) -> dict:
+    key = body.get("assistant", "")
+    return agent_cli.launch(key)
 
 
 # ---------------------------------------------------------------------------

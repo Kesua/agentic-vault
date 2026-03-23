@@ -114,6 +114,10 @@ The script installs Python if needed, creates the virtual environment, installs
 dependencies, and opens a browser-based wizard that walks you through connecting
 each service.
 
+It also checks whether OpenAI Codex or Claude Code is already installed on
+Windows or macOS. If neither is available, the wizard installs OpenAI Codex and
+offers to start a session in this vault when setup is complete.
+
 > **Mac note (ZIP downloads):** if macOS says "permission denied" when you
 > double-click `Setup_Mac.command`, open Terminal once and run:
 >
