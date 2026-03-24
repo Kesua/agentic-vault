@@ -1,0 +1,13 @@
+{
+  "context": {
+    "ignore": [
+      ".git",
+      ".venv",
+      ".obsidian",
+      "_attachments",
+      "90_System/secrets",
+      "**/.env",
+      "**/.env.*"
+    ]
+  }
+}
