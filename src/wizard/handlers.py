@@ -9,7 +9,7 @@ from pathlib import Path
 
 from . import agent_cli, google_auth_helper, state, validators
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 SECRETS_DIR = REPO_ROOT / "90_System" / "secrets"
 INTEGRATIONS_DIR = REPO_ROOT / "90_System" / "Integrations"
 
