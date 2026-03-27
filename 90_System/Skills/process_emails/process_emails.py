@@ -5,6 +5,7 @@ import re
 import sys
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
+from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -17,7 +18,7 @@ GMAIL_SKILL_DIR = Path(__file__).resolve().parents[1] / "gmail_assistant"
 if str(GMAIL_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(GMAIL_SKILL_DIR))
 
-import gmail_assistant as ga  # noqa: E402
+import gmail_assistant as ga  # type: ignore # noqa: E402
 
 
 def _configure_stdio() -> None:
@@ -37,7 +38,7 @@ _configure_stdio()
 def _sanitize_filename(text: str) -> str:
     text = re.sub(r'[<>:"/\\\\|?*]+', "-", text.strip())
     text = re.sub(r"\s+", " ", text).strip().rstrip(".")
-    return text[:120] if text else "Untitled"
+    return str(text)[0:120] if text else "Untitled"
 
 
 def _target_day_path(day_value: datetime) -> Path:
@@ -49,11 +50,11 @@ def _target_day_path(day_value: datetime) -> Path:
     )
 
 
-def _frontmatter(text: str) -> dict[str, object]:
+def _frontmatter(text: str) -> dict[str, Any]:
     match = re.match(r"(?s)^\ufeff?---\r?\n(.*?)\r?\n---\r?\n?", text)
     if not match:
         return {}
-    data: dict[str, object] = {}
+    data: dict[str, Any] = {}
     key: str | None = None
     for raw_line in match.group(1).splitlines():
         line = raw_line.rstrip()
@@ -61,22 +62,23 @@ def _frontmatter(text: str) -> dict[str, object]:
             continue
         list_match = re.match(r"^\s*-\s+(.*)$", line)
         if list_match and key:
-            data.setdefault(key, [])
-            if isinstance(data[key], list):
-                data[key].append(_yaml_unquote(list_match.group(1).strip()))
+            data.setdefault(str(key), [])
+            if isinstance(data[str(key)], list):
+                # type: ignore
+                data[str(key)].append(_yaml_unquote(list_match.group(1).strip()))
             continue
         kv_match = re.match(r"^([A-Za-z0-9_-]+):\s*(.*)$", line)
         if not kv_match:
             continue
         key = kv_match.group(1)
         raw_value = kv_match.group(2).strip()
-        data[key] = _yaml_unquote(raw_value) if raw_value else []
+        data[str(key)] = _yaml_unquote(raw_value) if raw_value else []
     return data
 
 
 def _yaml_unquote(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-        inner = value[1:-1]
+        inner = str(value)[1:-1]
         if value[0] == '"':
             return inner.replace('\\"', '"').replace("\\\\", "\\")
         return inner
@@ -170,7 +172,7 @@ def _render_summary(
                 [
                     f"- `{message_dt}` [{account}] {sender} - {subject}",
                     f"  - Thread: `{message.thread_id}`",
-                    f"  - Project: ",
+                    "  - Project: ",
                     f"  - Summary: {snippet or '(No snippet)'}",
                 ]
             )
@@ -312,7 +314,7 @@ def _remove_older_instances(
             continue
         if str(metadata.get("account", "")).strip() != account:
             continue
-        removed += 1
+        removed = int(removed) + 1  # type: ignore
         if dry_run:
             print(f"Would remove older thread snapshot: {path}")
         else:
@@ -333,9 +335,9 @@ def _sent_threads_for_account(
     items: list[tuple[list[ga.GmailMessage], str]] = []
     seen: set[str] = set()
     for thread_id in thread_ids:
-        if thread_id in seen:
+        if str(thread_id) in seen:
             continue
-        seen.add(thread_id)
+        seen.add(str(thread_id))
         messages = ga._get_thread_messages(service, thread_id)
         if not messages or not _thread_has_sent_message(messages, my_email, cutoff):
             continue

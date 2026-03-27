@@ -538,7 +538,7 @@ def _google_trends_dailytrends_yesterday(
 
 def _xml_item_text(item: ET.Element, local_name: str) -> str:
     for child in list(item):
-        if _strip_xml_namespace(child.tag) == local_name:
+        if child.tag.split("}")[-1] == local_name:
             return (child.text or "").strip()
     return ""
 

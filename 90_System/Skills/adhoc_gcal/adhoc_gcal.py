@@ -19,7 +19,7 @@ GCAL_SKILL_DIR = REPO_ROOT / "90_System" / "Skills" / "gcal_today"
 if str(GCAL_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(GCAL_SKILL_DIR))
 
-import gcal_today as gcal_base
+import gcal_today as gcal_base  # noqa: E402
 
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]

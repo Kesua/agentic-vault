@@ -13,7 +13,7 @@ TODOIST_SKILL_DIR = REPO_ROOT / "90_System" / "Skills" / "daily_brief_todoist"
 if str(TODOIST_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(TODOIST_SKILL_DIR))
 
-import daily_brief_todoist as todo_base
+import daily_brief_todoist as todo_base  # noqa: E402
 
 
 def _todoist_request(

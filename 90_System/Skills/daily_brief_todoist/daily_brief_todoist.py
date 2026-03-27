@@ -42,17 +42,17 @@ def _load_todoist_token() -> str:
 
     try:
         payload = json.loads(raw_text)
-    except json.JSONDecodeError as exc:
+    except json.JSONDecodeError:
         # Also support plain text token files (non-JSON).
         return raw_text
 
     if isinstance(payload, dict):
         token = payload.get("token")
-        if not isinstance(token, str) or not token.strip():
+        if not isinstance(token, str) or not str(token).strip():
             raise RuntimeError(
                 f"Token file missing non-empty 'token' field: {TODOIST_TOKEN_PATH}"
             )
-        return token.strip()
+        return str(token).strip()
 
     if isinstance(payload, str) and payload.strip():
         # Also support raw JSON string format: "todoist_token_here"
@@ -62,8 +62,8 @@ def _load_todoist_token() -> str:
         first = payload[0]
         if isinstance(first, dict):
             token = first.get("token")
-            if isinstance(token, str) and token.strip():
-                return token.strip()
+            if isinstance(token, str) and str(token).strip():
+                return str(token).strip()
 
     raise RuntimeError(
         f"Unsupported token file format in {TODOIST_TOKEN_PATH}. "
@@ -90,8 +90,8 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
 
     while True:
         query: dict[str, str] = {"limit": "200"}
-        if cursor:
-            query["cursor"] = cursor
+        if cursor is not None:
+            query["cursor"] = str(cursor)
         url = url_base + "?" + parse.urlencode(query)
 
         req = request.Request(url, headers=headers, method="GET")
@@ -101,7 +101,7 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
                 body = resp.read()
         except error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Todoist API HTTP {exc.code}: {body[:500]}") from exc
+            raise RuntimeError(f"Todoist API HTTP {exc.code}: {str(body)[0:500]}") from exc
         except error.URLError as exc:
             raise RuntimeError(f"Todoist API request failed: {exc}") from exc
 
@@ -126,9 +126,9 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
 
         if not isinstance(items, list):
             preview = (
-                json.dumps(data, ensure_ascii=False)[:500]
+                json.dumps(data, ensure_ascii=False)[0:500]
                 if isinstance(data, (dict, list))
-                else str(data)[:500]
+                else str(data)[0:500]
             )
             raise RuntimeError(
                 "Unexpected Todoist API response format: expected a list of tasks "
@@ -143,7 +143,7 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
             break
         if next_cursor in seen_cursors:
             break
-        seen_cursors.add(next_cursor)
+        seen_cursors.add(str(next_cursor))
         cursor = next_cursor
 
     return out
@@ -164,9 +164,9 @@ def _fetch_name_map(token: str, url_base: str) -> dict[str, str]:
     for item in items:
         item_id = item.get("id")
         name = item.get("name")
-        if item_id is None or not isinstance(name, str) or not name.strip():
+        if item_id is None or not isinstance(name, str) or not str(name).strip():
             continue
-        out[str(item_id)] = name.strip()
+        out[str(item_id)] = str(name).strip()
     return out
 
 
@@ -175,12 +175,12 @@ def _task_due_date_str(task: dict[str, Any]) -> str | None:
     if not isinstance(due, dict):
         return None
     due_date = due.get("date")
-    if not isinstance(due_date, str) or not due_date.strip():
+    if not isinstance(due_date, str) or not str(due_date).strip():
         return None
-    due_date = due_date.strip()
+    due_date = str(due_date).strip()
     # Todoist v1 may return a full RFC3339 datetime here for timed tasks.
     if len(due_date) >= 10:
-        date_part = due_date[:10]
+        date_part = str(due_date)[0:10]
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_part):
             return date_part
     return due_date
@@ -241,7 +241,7 @@ def _build_task_graph(
     for task in tasks:
         task_id = _task_id_str(task)
         if not task_id:
-            synthetic_idx += 1
+            synthetic_idx = synthetic_idx + 1
             task_id = f"__synthetic_{synthetic_idx}"
             synthetic_keys[id(task)] = task_id
         task_by_id[task_id] = task
@@ -321,7 +321,7 @@ def _group_task_families_by_due_date(
             )
         if not due_key or due_key not in target_keys:
             continue
-        in_range_count += 1
+        in_range_count = in_range_count + 1
 
     for root in roots:
         root_id = _task_id_str(root) or f"__anon_{id(root)}"
@@ -334,7 +334,8 @@ def _group_task_families_by_due_date(
             grouped[due_key].append(root_id)
 
     for due_key in grouped:
-        grouped[due_key].sort(
+        v: list[str] = grouped[due_key]
+        v.sort(
             key=lambda root_id: _sort_key_for_task(task_by_id[root_id])
         )
 
@@ -539,11 +540,11 @@ def _render_tasks_section(
                         visited=set(),
                     )
                 )
-                if r_idx != len(section_root_ids) - 1:
+                if r_idx != int(len(section_root_ids)) - 1:
                     lines.append("")
-            if s_idx != len(section_groups) - 1:
+            if s_idx != int(len(section_groups)) - 1:
                 lines.append("")
-        if p_idx != len(grouped) - 1:
+        if p_idx != int(len(grouped)) - 1:
             lines.append("")
 
     lines.append("")
@@ -556,7 +557,7 @@ def _replace_or_append_tasks_section(existing_text: str, tasks_section: str) -> 
     match = pattern.search(existing_text)
     if match:
         updated = (
-            existing_text[: match.start()] + section + existing_text[match.end() :]
+            str(existing_text)[0: match.start()] + section + str(existing_text)[match.end() :]
         )
     else:
         updated = existing_text
@@ -618,14 +619,14 @@ def sync_daily_briefs(
             existing = path.read_text(encoding="utf-8")
             new_content = _replace_or_append_tasks_section(existing, tasks_section)
             if new_content == existing:
-                unchanged += 1
+                unchanged = unchanged + 1
             else:
-                updated += 1
+                updated = updated + 1
                 if not dry_run:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_text(new_content, encoding="utf-8")
         else:
-            created += 1
+            created = created + 1
             if not dry_run:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(tasks_section, encoding="utf-8")

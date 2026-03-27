@@ -13,7 +13,7 @@ FIREFLIES_SKILL_DIR = REPO_ROOT / "90_System" / "Skills" / "fireflies_sync"
 if str(FIREFLIES_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(FIREFLIES_SKILL_DIR))
 
-import fireflies_sync as ff_base
+import fireflies_sync as ff_base  # noqa: E402
 
 
 def _normalize_transcript(t: ff_base.FirefliesTranscript) -> dict[str, Any]:
