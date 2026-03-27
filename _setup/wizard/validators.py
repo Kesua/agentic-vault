@@ -12,6 +12,27 @@ import re
 import urllib.error
 import urllib.request
 
+def _make_request(
+    url: str,
+    headers: dict = None,
+    data: bytes = None,
+    method: str = "GET",
+    auth_error_msg: str = "Token rejected.",
+    api_name: str = "API",
+    timeout: int = 15
+) -> tuple[bool, dict, str]:
+    """Helper for JSON-based HTTP requests to reduce boilerplate."""
+    try:
+        req = urllib.request.Request(url, headers=headers or {}, data=data, method=method)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return True, json.loads(resp.read()), ""
+    except urllib.error.HTTPError as exc:
+        if exc.code == 401:
+            return False, {}, auth_error_msg
+        return False, {}, f"{api_name} error: HTTP {exc.code}"
+    except Exception as exc:
+        return False, {}, f"Could not reach {api_name}: {exc}"
+
 # ---------------------------------------------------------------------------
 # Todoist
 # ---------------------------------------------------------------------------
@@ -34,24 +55,16 @@ def live_check_todoist(token: str) -> dict:
     if not fmt["valid"]:
         return fmt
     clean_token = fmt.get("token", token.strip())
-    try:
-        req = urllib.request.Request(
-            "https://api.todoist.com/api/v1/projects",
-            headers={"Authorization": f"Bearer {clean_token}"},
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            projects = json.loads(resp.read())
-            return {
-                "valid": True,
-                "message": f"Connected! Found {len(projects)} projects.",
-                "token": clean_token,
-            }
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            return {"valid": False, "message": "Token rejected by Todoist. Check and try again."}
-        return {"valid": False, "message": f"Todoist API error: HTTP {exc.code}"}
-    except Exception as exc:
-        return {"valid": False, "message": f"Could not reach Todoist: {exc}"}
+    
+    ok, data, err = _make_request(
+        "https://api.todoist.com/api/v1/projects",
+        headers={"Authorization": f"Bearer {clean_token}"},
+        auth_error_msg="Token rejected by Todoist. Check and try again.",
+        api_name="Todoist API"
+    )
+    if ok:
+        return {"valid": True, "message": f"Connected! Found {len(data)} projects.", "token": clean_token}
+    return {"valid": False, "message": err}
 
 
 # ---------------------------------------------------------------------------
@@ -75,41 +88,43 @@ def live_check_telegram(token: str) -> dict:
     fmt = format_check_telegram(token)
     if not fmt["valid"]:
         return fmt
-    try:
-        url = f"https://api.telegram.org/bot{token.strip()}/getMe"
-        with urllib.request.urlopen(url, timeout=10) as resp:
-            data = json.loads(resp.read())
-            if data.get("ok"):
-                bot_name = data["result"].get("username", "unknown")
-                return {"valid": True, "message": f"Bot verified: @{bot_name}", "token": token.strip()}
-            return {"valid": False, "message": "Telegram rejected this token."}
-    except Exception as exc:
-        return {"valid": False, "message": f"Could not reach Telegram: {exc}"}
+    clean_token = token.strip()
+
+    ok, data, err = _make_request(
+        f"https://api.telegram.org/bot{clean_token}/getMe",
+        auth_error_msg="Telegram rejected this token.",
+        api_name="Telegram API"
+    )
+    if ok and data.get("ok"):
+        bot_name = data["result"].get("username", "unknown")
+        return {"valid": True, "message": f"Bot verified: @{bot_name}", "token": clean_token}
+    return {"valid": False, "message": err or "Telegram rejected this token."}
 
 
 def detect_telegram_ids(token: str) -> dict:
     """Call getUpdates to find user_id and chat_id from the most recent message."""
-    try:
-        url = f"https://api.telegram.org/bot{token.strip()}/getUpdates?offset=-1&limit=5"
-        with urllib.request.urlopen(url, timeout=10) as resp:
-            data = json.loads(resp.read())
-            if not data.get("ok") or not data.get("result"):
-                return {"found": False, "message": "No messages found. Send a message to your bot first."}
-            for update in reversed(data["result"]):
-                msg = update.get("message", {})
-                user = msg.get("from", {})
-                chat = msg.get("chat", {})
-                if user.get("id") and chat.get("id"):
-                    return {
-                        "found": True,
-                        "user_id": user["id"],
-                        "chat_id": chat["id"],
-                        "username": user.get("username", ""),
-                        "first_name": user.get("first_name", ""),
-                    }
-            return {"found": False, "message": "Messages found but no user info. Try sending /start to the bot."}
-    except Exception as exc:
-        return {"found": False, "message": f"Error calling getUpdates: {exc}"}
+    ok, data, err = _make_request(
+        f"https://api.telegram.org/bot{token.strip()}/getUpdates?offset=-1&limit=5",
+        api_name="Telegram API"
+    )
+    if not ok:
+        return {"found": False, "message": err.replace("API error:", "Error calling getUpdates:")}
+    if not data.get("ok") or not data.get("result"):
+        return {"found": False, "message": "No messages found. Send a message to your bot first."}
+    
+    for update in reversed(data["result"]):
+        msg = update.get("message", {})
+        user = msg.get("from", {})
+        chat = msg.get("chat", {})
+        if user.get("id") and chat.get("id"):
+            return {
+                "found": True,
+                "user_id": user["id"],
+                "chat_id": chat["id"],
+                "username": user.get("username", ""),
+                "first_name": user.get("first_name", ""),
+            }
+    return {"found": False, "message": "Messages found but no user info. Try sending /start to the bot."}
 
 
 # ---------------------------------------------------------------------------
@@ -127,26 +142,20 @@ def live_check_fireflies(key: str) -> dict:
     fmt = format_check_fireflies(key)
     if not fmt["valid"]:
         return fmt
-    try:
-        payload = json.dumps({"query": "{ user { email } }"}).encode("utf-8")
-        req = urllib.request.Request(
-            "https://api.fireflies.ai/graphql",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {key.strip()}",
-                "Content-Type": "application/json",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-            email = data.get("data", {}).get("user", {}).get("email", "unknown")
-            return {"valid": True, "message": f"Connected as {email}", "key": key.strip()}
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            return {"valid": False, "message": "API key rejected by Fireflies."}
-        return {"valid": False, "message": f"Fireflies API error: HTTP {exc.code}"}
-    except Exception as exc:
-        return {"valid": False, "message": f"Could not reach Fireflies: {exc}"}
+    clean_key = key.strip()
+
+    ok, data, err = _make_request(
+        "https://api.fireflies.ai/graphql",
+        headers={"Authorization": f"Bearer {clean_key}", "Content-Type": "application/json"},
+        data=json.dumps({"query": "{ user { email } }"}).encode("utf-8"),
+        method="POST",
+        auth_error_msg="API key rejected by Fireflies.",
+        api_name="Fireflies API"
+    )
+    if ok:
+        email = data.get("data", {}).get("user", {}).get("email", "unknown")
+        return {"valid": True, "message": f"Connected as {email}", "key": clean_key}
+    return {"valid": False, "message": err}
 
 
 # ---------------------------------------------------------------------------
@@ -164,23 +173,20 @@ def live_check_clockify(key: str) -> dict:
     fmt = format_check_clockify(key)
     if not fmt["valid"]:
         return fmt
-    try:
-        req = urllib.request.Request(
-            "https://api.clockify.me/api/v1/user",
-            headers={"X-Api-Key": key.strip()},
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-            name = data.get("name", "unknown")
-            email = data.get("email", "")
-            label = f"{name} ({email})" if email else name
-            return {"valid": True, "message": f"Connected as {label}", "key": key.strip()}
-    except urllib.error.HTTPError as exc:
-        if exc.code == 401:
-            return {"valid": False, "message": "API key rejected by Clockify."}
-        return {"valid": False, "message": f"Clockify API error: HTTP {exc.code}"}
-    except Exception as exc:
-        return {"valid": False, "message": f"Could not reach Clockify: {exc}"}
+    clean_key = key.strip()
+
+    ok, data, err = _make_request(
+        "https://api.clockify.me/api/v1/user",
+        headers={"X-Api-Key": clean_key},
+        auth_error_msg="API key rejected by Clockify.",
+        api_name="Clockify API"
+    )
+    if ok:
+        name = data.get("name", "unknown")
+        email = data.get("email", "")
+        label = f"{name} ({email})" if email else name
+        return {"valid": True, "message": f"Connected as {label}", "key": clean_key}
+    return {"valid": False, "message": err}
 
 
 # ---------------------------------------------------------------------------
@@ -201,50 +207,46 @@ def live_check_slack(token: str) -> dict:
     fmt = format_check_slack(token)
     if not fmt["valid"]:
         return fmt
-    try:
-        req = urllib.request.Request(
-            "https://slack.com/api/auth.test",
-            headers={"Authorization": f"Bearer {token.strip()}"},
-            data=b"",
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read())
-            if data.get("ok"):
-                return {
-                    "valid": True,
-                    "message": f"Connected to workspace: {data.get('team', 'unknown')}",
-                    "team_id": data.get("team_id"),
-                    "user_id": data.get("user_id"),
-                    "team": data.get("team"),
-                    "token": token.strip(),
-                }
-            return {"valid": False, "message": f"Slack error: {data.get('error', 'unknown')}"}
-    except Exception as exc:
-        return {"valid": False, "message": f"Could not reach Slack: {exc}"}
+    clean_token = token.strip()
+
+    ok, data, err = _make_request(
+        "https://slack.com/api/auth.test",
+        headers={"Authorization": f"Bearer {clean_token}"},
+        data=b"",
+        method="POST",
+        api_name="Slack"
+    )
+    if ok and data.get("ok"):
+        return {
+            "valid": True,
+            "message": f"Connected to workspace: {data.get('team', 'unknown')}",
+            "team_id": data.get("team_id"),
+            "user_id": data.get("user_id"),
+            "team": data.get("team"),
+            "token": clean_token,
+        }
+    return {"valid": False, "message": err or f"Slack error: {data.get('error', 'unknown')}"}
 
 
 def list_slack_conversations(token: str) -> dict:
     """Fetch public and private channels the bot can see."""
-    try:
-        url = "https://slack.com/api/conversations.list?types=public_channel,private_channel,im&limit=200"
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token.strip()}"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-            if data.get("ok"):
-                channels = [
-                    {
-                        "id": ch["id"],
-                        "name": ch.get("name", ch.get("user", "dm")),
-                        "type": _channel_type(ch),
-                        "is_member": ch.get("is_member", False),
-                    }
-                    for ch in data.get("channels", [])
-                ]
-                return {"ok": True, "channels": channels}
-            return {"ok": False, "error": data.get("error", "unknown")}
-    except Exception as exc:
-        return {"ok": False, "error": str(exc)}
+    ok, data, err = _make_request(
+        "https://slack.com/api/conversations.list?types=public_channel,private_channel,im&limit=200",
+        headers={"Authorization": f"Bearer {token.strip()}"},
+        api_name="Slack"
+    )
+    if ok and data.get("ok"):
+        channels = [
+            {
+                "id": ch["id"],
+                "name": ch.get("name", ch.get("user", "dm")),
+                "type": _channel_type(ch),
+                "is_member": ch.get("is_member", False),
+            }
+            for ch in data.get("channels", [])
+        ]
+        return {"ok": True, "channels": channels}
+    return {"ok": False, "error": err or data.get("error", "unknown")}
 
 
 def _channel_type(ch: dict) -> str:
