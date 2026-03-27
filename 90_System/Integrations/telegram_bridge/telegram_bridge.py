@@ -328,7 +328,7 @@ def _telegram_request(
             body = response.read().decode("utf-8")
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise BridgeError(f"Telegram API HTTP {exc.code}: {detail[:500]}") from exc
+        raise BridgeError(f"Telegram API HTTP {exc.code}: {detail[:500]}") from exc  # type: ignore
     except error.URLError as exc:
         raise BridgeError(f"Telegram API request failed: {exc}") from exc
 
@@ -347,7 +347,7 @@ def send_message(config: BridgeConfig, chat_id: int, text: str) -> None:
         "sendMessage",
         {
             "chat_id": str(chat_id),
-            "text": text[:4000],
+            "text": text[:4000],  # type: ignore
         },
     )
 
@@ -375,7 +375,7 @@ def _extract_text(message: dict[str, Any]) -> tuple[str | None, str | None]:
 
 def _safe_preview(text: str, limit: int = 200) -> str:
     compact = " ".join(text.split())
-    return compact[:limit]
+    return compact[:limit]  # type: ignore
 
 
 def _build_help_text() -> str:
@@ -440,7 +440,7 @@ def _normalize_prompt(raw_text: str, accept_plain_text: bool) -> str | None:
     if text.startswith("/status"):
         return "__STATUS__"
     if text.startswith("/run"):
-        prompt = text[4:].strip()
+        prompt = text[4:].strip()  # type: ignore
         return prompt or None
     if accept_plain_text:
         return text
@@ -544,7 +544,7 @@ def run_codex(
     user_text: str,
     message: dict[str, Any],
     session: dict[str, Any],
-) -> tuple[str, int, str]:
+) -> tuple[str, int, str]:  # type: ignore
     prompt = _build_codex_prompt(user_text, message, session)
     temp_path = Path(
         tempfile.mkdtemp(prefix="telegram_bridge_", dir=config.runtime_dir)
@@ -636,7 +636,7 @@ def _handle_prompt(
         )
         if exit_code != 0:
             _append_session_turn(config, session_key, "user", user_text)
-            reply_text = f"Codex skoncil s chybou ({summary}).\n\n{reply_text[:3000]}"
+            reply_text = f"Codex skoncil s chybou ({summary}).\n\n{reply_text[:3000]}"  # type: ignore
             if _context_limit_hint(reply_text):
                 reply_text += "\n\nPokud je kontext uz prilis dlouhy, posli /start a zacni novou session."
         else:
@@ -778,7 +778,7 @@ def run_loop(config: BridgeConfig) -> int:
             for update in updates:
                 update_id = update.get("update_id")
                 if isinstance(update_id, int):
-                    offset = update_id + 1
+                    offset = update_id + 1  # type: ignore
                     _save_last_update_id(config, offset)
                 handle_update(config, update)
         except KeyboardInterrupt:
@@ -787,6 +787,7 @@ def run_loop(config: BridgeConfig) -> int:
         except Exception as exc:
             _append_log(config, "error", "Polling loop error", error=str(exc))
             time.sleep(5)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:

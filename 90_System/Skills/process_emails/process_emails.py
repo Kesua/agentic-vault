@@ -38,7 +38,7 @@ _configure_stdio()
 def _sanitize_filename(text: str) -> str:
     text = re.sub(r'[<>:"/\\\\|?*]+', "-", text.strip())
     text = re.sub(r"\s+", " ", text).strip().rstrip(".")
-    return str(text)[0:120] if text else "Untitled"
+    return str(text)[0:120] if text else "Untitled"  # type: ignore
 
 
 def _target_day_path(day_value: datetime) -> Path:
@@ -78,7 +78,7 @@ def _frontmatter(text: str) -> dict[str, Any]:
 
 def _yaml_unquote(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
-        inner = str(value)[1:-1]
+        inner = str(value)[1:-1]  # type: ignore
         if value[0] == '"':
             return inner.replace('\\"', '"').replace("\\\\", "\\")
         return inner
@@ -314,7 +314,7 @@ def _remove_older_instances(
             continue
         if str(metadata.get("account", "")).strip() != account:
             continue
-        removed = int(removed) + 1  # type: ignore
+        removed += 1  # type: ignore
         if dry_run:
             print(f"Would remove older thread snapshot: {path}")
         else:

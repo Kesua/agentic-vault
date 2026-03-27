@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+from google.auth.transport.requests import Request  # type: ignore
+from google.oauth2.credentials import Credentials  # type: ignore
+from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore
+from googleapiclient.discovery import build  # type: ignore
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -19,7 +19,7 @@ GCAL_SKILL_DIR = REPO_ROOT / "90_System" / "Skills" / "gcal_today"
 if str(GCAL_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(GCAL_SKILL_DIR))
 
-import gcal_today as gcal_base  # noqa: E402
+import gcal_today as gcal_base  # type: ignore # noqa: E402
 
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
@@ -153,7 +153,7 @@ def command_list(args: argparse.Namespace) -> None:
     events.sort(key=lambda item: str(item.get("start") or ""))
     print(
         json.dumps(
-            {"count": len(events), "events": events[: args.limit]},
+            {"count": len(events), "events": events[: args.limit]},  # type: ignore
             ensure_ascii=False,
             indent=2,
         )
@@ -183,7 +183,7 @@ def command_show(args: argparse.Namespace) -> None:
 def _draft_filename(title: str) -> str:
     stamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
     safe_title = re.sub(r'[<>:"/\\\\|?*]+', "-", title).strip() or "Untitled"
-    safe_title = _normalize_text(safe_title)[:80].rstrip()
+    safe_title = _normalize_text(safe_title)[:80].rstrip()  # type: ignore
     return f"{stamp} - {safe_title}.md"
 
 

@@ -13,7 +13,7 @@ TODOIST_SKILL_DIR = REPO_ROOT / "90_System" / "Skills" / "daily_brief_todoist"
 if str(TODOIST_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(TODOIST_SKILL_DIR))
 
-import daily_brief_todoist as todo_base  # noqa: E402
+import daily_brief_todoist as todo_base  # type: ignore # noqa: E402
 
 
 def _todoist_request(
@@ -34,7 +34,7 @@ def _todoist_request(
             raw = resp.read()
     except error.HTTPError as exc:
         body_text = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"Todoist API HTTP {exc.code}: {body_text[:500]}") from exc
+        raise RuntimeError(f"Todoist API HTTP {exc.code}: {body_text[:500]}") from exc  # type: ignore
     except error.URLError as exc:
         raise RuntimeError(f"Todoist API request failed: {exc}") from exc
 
@@ -218,7 +218,7 @@ def command_list(args: argparse.Namespace) -> None:
 
     filtered.sort(key=todo_base._sort_key_for_task)
     normalized = [
-        _normalize_task(task, project_names) for task in filtered[: args.limit]
+        _normalize_task(task, project_names) for task in filtered[: args.limit]  # type: ignore
     ]
     print(
         json.dumps(
