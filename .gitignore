@@ -26,3 +26,5 @@ _setup/wizard_state.json
 .obsidian/
 .claude/settings.local.json
 __pycache__/
+*.pyc
+*.pyo

@@ -14,8 +14,8 @@ import urllib.request
 
 def _make_request(
     url: str,
-    headers: dict = None,
-    data: bytes = None,
+    headers: dict | None = None,
+    data: bytes | None = None,
     method: str = "GET",
     auth_error_msg: str = "Token rejected.",
     api_name: str = "API",
