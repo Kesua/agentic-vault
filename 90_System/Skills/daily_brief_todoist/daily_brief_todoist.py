@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 from urllib import error, parse, request
 
 
@@ -42,15 +42,17 @@ def _load_todoist_token() -> str:
 
     try:
         payload = json.loads(raw_text)
-    except json.JSONDecodeError as exc:
+    except json.JSONDecodeError:
         # Also support plain text token files (non-JSON).
         return raw_text
 
     if isinstance(payload, dict):
         token = payload.get("token")
-        if not isinstance(token, str) or not token.strip():
-            raise RuntimeError(f"Token file missing non-empty 'token' field: {TODOIST_TOKEN_PATH}")
-        return token.strip()
+        if not isinstance(token, str) or not str(token).strip():
+            raise RuntimeError(
+                f"Token file missing non-empty 'token' field: {TODOIST_TOKEN_PATH}"
+            )
+        return str(token).strip()
 
     if isinstance(payload, str) and payload.strip():
         # Also support raw JSON string format: "todoist_token_here"
@@ -60,12 +62,12 @@ def _load_todoist_token() -> str:
         first = payload[0]
         if isinstance(first, dict):
             token = first.get("token")
-            if isinstance(token, str) and token.strip():
-                return token.strip()
+            if isinstance(token, str) and str(token).strip():
+                return str(token).strip()
 
     raise RuntimeError(
         f"Unsupported token file format in {TODOIST_TOKEN_PATH}. "
-        "Use {\"token\":\"...\"}, a raw JSON string token, plain text token, or [{\"token\":\"...\"}]."
+        'Use {"token":"..."}, a raw JSON string token, plain text token, or [{"token":"..."}].'
     )
 
 
@@ -88,8 +90,8 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
 
     while True:
         query: dict[str, str] = {"limit": "200"}
-        if cursor:
-            query["cursor"] = cursor
+        if cursor is not None:
+            query["cursor"] = str(cursor)
         url = url_base + "?" + parse.urlencode(query)
 
         req = request.Request(url, headers=headers, method="GET")
@@ -99,7 +101,7 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
                 body = resp.read()
         except error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(f"Todoist API HTTP {exc.code}: {body[:500]}") from exc
+            raise RuntimeError(f"Todoist API HTTP {exc.code}: {str(body)[0:500]}") from exc  # type: ignore
         except error.URLError as exc:
             raise RuntimeError(f"Todoist API request failed: {exc}") from exc
 
@@ -123,7 +125,11 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
                     break
 
         if not isinstance(items, list):
-            preview = json.dumps(data, ensure_ascii=False)[:500] if isinstance(data, (dict, list)) else str(data)[:500]
+            preview = (
+                json.dumps(data, ensure_ascii=False)[0:500]  # type: ignore
+                if isinstance(data, (dict, list))
+                else str(data)[0:500]  # type: ignore
+            )
             raise RuntimeError(
                 "Unexpected Todoist API response format: expected a list of tasks "
                 f"or an object containing one. Response preview: {preview}"
@@ -137,7 +143,7 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
             break
         if next_cursor in seen_cursors:
             break
-        seen_cursors.add(next_cursor)
+        seen_cursors.add(str(next_cursor))
         cursor = next_cursor
 
     return out
@@ -158,9 +164,9 @@ def _fetch_name_map(token: str, url_base: str) -> dict[str, str]:
     for item in items:
         item_id = item.get("id")
         name = item.get("name")
-        if item_id is None or not isinstance(name, str) or not name.strip():
+        if item_id is None or not isinstance(name, str) or not str(name).strip():
             continue
-        out[str(item_id)] = name.strip()
+        out[str(item_id)] = str(name).strip()
     return out
 
 
@@ -169,12 +175,12 @@ def _task_due_date_str(task: dict[str, Any]) -> str | None:
     if not isinstance(due, dict):
         return None
     due_date = due.get("date")
-    if not isinstance(due_date, str) or not due_date.strip():
+    if not isinstance(due_date, str) or not str(due_date).strip():
         return None
-    due_date = due_date.strip()
+    due_date = str(due_date).strip()
     # Todoist v1 may return a full RFC3339 datetime here for timed tasks.
     if len(due_date) >= 10:
-        date_part = due_date[:10]
+        date_part = str(due_date)[0:10]  # type: ignore
         if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_part):
             return date_part
     return due_date
@@ -200,7 +206,11 @@ def _sort_key_for_task(task: dict[str, Any]) -> tuple[Any, ...]:
     return (
         *_norm_id(task.get("project_id")),
         *_norm_id(task.get("section_id")),
-        *_norm_int(task.get("child_order") if task.get("child_order") is not None else task.get("order")),
+        *_norm_int(
+            task.get("child_order")
+            if task.get("child_order") is not None
+            else task.get("order")
+        ),
         priority_sort,
         content_sort,
     )
@@ -222,14 +232,16 @@ def _parent_id_str(task: dict[str, Any]) -> str | None:
 
 def _build_task_graph(
     tasks: list[dict[str, Any]],
-) -> tuple[dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+) -> tuple[
+    dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], list[dict[str, Any]]
+]:
     task_by_id: dict[str, dict[str, Any]] = {}
     synthetic_idx = 0
     synthetic_keys: dict[int, str] = {}
     for task in tasks:
         task_id = _task_id_str(task)
         if not task_id:
-            synthetic_idx += 1
+            synthetic_idx += 1  # type: ignore
             task_id = f"__synthetic_{synthetic_idx}"
             synthetic_keys[id(task)] = task_id
         task_by_id[task_id] = task
@@ -241,7 +253,11 @@ def _build_task_graph(
     roots: list[dict[str, Any]] = []
     for task in task_by_id.values():
         parent_id = _parent_id_str(task)
-        if parent_id and parent_id in task_by_id and parent_id != _effective_task_id(task):
+        if (
+            parent_id
+            and parent_id in task_by_id
+            and parent_id != _effective_task_id(task)
+        ):
             children_by_parent.setdefault(parent_id, []).append(task)
         else:
             roots.append(task)
@@ -277,13 +293,13 @@ def _group_task_families_by_due_date(
     target_days: list[date],
     debug_preview: bool = False,
 ) -> tuple[
-    dict[str, list[str]],
+    Dict[str, List[str]],
     int,
-    dict[str, dict[str, Any]],
-    dict[str, list[dict[str, Any]]],
+    Dict[str, Dict[str, Any]],
+    Dict[str, List[Dict[str, Any]]],
 ]:
     target_keys = {d.isoformat() for d in target_days}
-    grouped: dict[str, list[str]] = {d.isoformat(): [] for d in target_days}
+    tasks_by_day: Dict[str, List[str]] = {d.isoformat(): [] for d in target_days}
     in_range_count = 0
     debug_rows: list[str] = []
     task_by_id, children_by_parent, roots = _build_task_graph(tasks)
@@ -305,7 +321,7 @@ def _group_task_families_by_due_date(
             )
         if not due_key or due_key not in target_keys:
             continue
-        in_range_count += 1
+        in_range_count += 1  # type: ignore
 
     for root in roots:
         root_id = _task_id_str(root) or f"__anon_{id(root)}"
@@ -315,17 +331,20 @@ def _group_task_families_by_due_date(
             if due_key and due_key in target_keys:
                 member_due_days.add(due_key)
         for due_key in sorted(member_due_days):
-            grouped[due_key].append(root_id)
+            tasks_by_day[due_key].append(root_id)  # type: ignore
 
-    for due_key in grouped:
-        grouped[due_key].sort(key=lambda root_id: _sort_key_for_task(task_by_id[root_id]))
+    for due_key in tasks_by_day:
+        v = tasks_by_day[due_key]
+        v.sort(
+            key=lambda root_id: _sort_key_for_task(task_by_id[root_id])
+        )
 
     if debug_preview:
         print("Debug due preview (first up to 10 tasks):")
         for row in debug_rows:
             print(f"  {row}")
 
-    return grouped, in_range_count, task_by_id, children_by_parent
+    return tasks_by_day, in_range_count, task_by_id, children_by_parent
 
 
 def _fmt_value(value: Any) -> str:
@@ -454,7 +473,11 @@ def _group_roots_by_project_section(
     return out
 
 
-def _family_member_count(root_id: str, children_by_parent: dict[str, list[dict[str, Any]]], task_by_id: dict[str, dict[str, Any]]) -> int:
+def _family_member_count(
+    root_id: str,
+    children_by_parent: dict[str, list[dict[str, Any]]],
+    task_by_id: dict[str, dict[str, Any]],
+) -> int:
     root = task_by_id.get(root_id)
     if not root:
         return 0
@@ -471,7 +494,10 @@ def _render_tasks_section(
     section_names: dict[str, str],
 ) -> str:
     now_str = datetime.now().astimezone().isoformat(timespec="seconds")
-    total_rendered_tasks = sum(_family_member_count(root_id, children_by_parent, task_by_id) for root_id in root_ids)
+    total_rendered_tasks = sum(
+        _family_member_count(root_id, children_by_parent, task_by_id)
+        for root_id in root_ids
+    )
     lines: list[str] = [
         "# Tasks",
         "",
@@ -514,11 +540,11 @@ def _render_tasks_section(
                         visited=set(),
                     )
                 )
-                if r_idx != len(section_root_ids) - 1:
+                if r_idx != int(len(list(section_root_ids))) - 1:
                     lines.append("")
-            if s_idx != len(section_groups) - 1:
+            if s_idx != int(len(list(section_groups))) - 1:
                 lines.append("")
-        if p_idx != len(grouped) - 1:
+        if p_idx != int(len(grouped)) - 1:
             lines.append("")
 
     lines.append("")
@@ -530,7 +556,9 @@ def _replace_or_append_tasks_section(existing_text: str, tasks_section: str) -> 
     pattern = re.compile(r"(?ms)^# Tasks\s*$.*?(?=^# |\Z)")
     match = pattern.search(existing_text)
     if match:
-        updated = existing_text[: match.start()] + section + existing_text[match.end() :]
+        updated = (
+            str(existing_text)[0: match.start()] + section + str(existing_text)[match.end() :]  # type: ignore
+        )
     else:
         updated = existing_text
         if updated and not updated.endswith("\n"):
@@ -552,16 +580,20 @@ def _daily_brief_path(day: date) -> Path:
     return DAILY_BRIEFS_ROOT / year / month / filename
 
 
-def sync_daily_briefs(days_ahead: int = 14, dry_run: bool = False, debug_due_preview: bool = False) -> SyncStats:
+def sync_daily_briefs(
+    days_ahead: int = 14, dry_run: bool = False, debug_due_preview: bool = False
+) -> SyncStats:
     token = _load_todoist_token()
     target_days = _target_dates(days_ahead=days_ahead)
     all_tasks = _fetch_active_tasks(token)
     project_names = _fetch_name_map(token, TODOIST_PROJECTS_URL)
     section_names = _fetch_name_map(token, TODOIST_SECTIONS_URL)
-    grouped, due_in_range, task_by_id, children_by_parent = _group_task_families_by_due_date(
-        all_tasks,
-        target_days,
-        debug_preview=debug_due_preview,
+    grouped, due_in_range, task_by_id, children_by_parent = (
+        _group_task_families_by_due_date(
+            all_tasks,
+            target_days,
+            debug_preview=debug_due_preview,
+        )
     )
 
     created = 0
@@ -587,14 +619,14 @@ def sync_daily_briefs(days_ahead: int = 14, dry_run: bool = False, debug_due_pre
             existing = path.read_text(encoding="utf-8")
             new_content = _replace_or_append_tasks_section(existing, tasks_section)
             if new_content == existing:
-                unchanged += 1
+                unchanged += 1  # type: ignore
             else:
-                updated += 1
+                updated += 1  # type: ignore
                 if not dry_run:
                     path.parent.mkdir(parents=True, exist_ok=True)
                     path.write_text(new_content, encoding="utf-8")
         else:
-            created += 1
+            created += 1  # type: ignore
             if not dry_run:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(tasks_section, encoding="utf-8")
@@ -625,10 +657,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="daily_brief_todoist")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_sync = sub.add_parser("sync", help="Sync Todoist tasks into daily briefs (today + 14 days)")
+    p_sync = sub.add_parser(
+        "sync", help="Sync Todoist tasks into daily briefs (today + 14 days)"
+    )
     p_sync.add_argument("--dry-run", action="store_true")
     p_sync.add_argument("--days-ahead", type=int, default=14)
-    p_sync.add_argument("--debug-due-preview", action="store_true", help="Print due-date parsing preview for first few tasks")
+    p_sync.add_argument(
+        "--debug-due-preview",
+        action="store_true",
+        help="Print due-date parsing preview for first few tasks",
+    )
 
     args = parser.parse_args(argv)
 

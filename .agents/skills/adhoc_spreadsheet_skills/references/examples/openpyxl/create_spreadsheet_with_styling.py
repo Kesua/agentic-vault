@@ -64,12 +64,16 @@ def populate_game_sheet(ws) -> None:
     for col in range(2, 6):
         apply_highlight_style(ws.cell(row=7, column=col), HIGHLIGHT_FILL_HEX)
 
-    rule = FormulaRule(formula=["LEN(A2)>0"], fill=PatternFill("solid", fgColor=HEADER_FILL_HEX))
+    rule = FormulaRule(
+        formula=["LEN(A2)>0"], fill=PatternFill("solid", fgColor=HEADER_FILL_HEX)
+    )
     ws.conditional_formatting.add("A2:G2", rule)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create a styled games scoreboard workbook.")
+    parser = argparse.ArgumentParser(
+        description="Create a styled games scoreboard workbook."
+    )
     parser.add_argument(
         "--output",
         type=Path,

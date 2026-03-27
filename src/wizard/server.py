@@ -134,6 +134,7 @@ def main() -> None:
     global _SERVER_REF  # noqa: PLW0603
 
     from . import handlers  # noqa: F811 -- deferred to avoid circular imports
+
     handlers.register_routes(API_ROUTES)
 
     port, server = _find_port()

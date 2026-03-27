@@ -95,7 +95,9 @@ def _fetch_projects(token: str, workspace_id: str) -> list[dict[str, Any]]:
     return data
 
 
-def _fetch_project_tasks(token: str, workspace_id: str, project_id: str) -> list[dict[str, Any]]:
+def _fetch_project_tasks(
+    token: str, workspace_id: str, project_id: str
+) -> list[dict[str, Any]]:
     data = _clockify_request(
         "GET",
         f"{API_BASE}/workspaces/{workspace_id}/projects/{project_id}/tasks?page-size=500",
@@ -117,7 +119,9 @@ def _normalize_project(project: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _match_single(items: list[dict[str, Any]], *, key: str, query: str, label: str) -> dict[str, Any]:
+def _match_single(
+    items: list[dict[str, Any]], *, key: str, query: str, label: str
+) -> dict[str, Any]:
     q = query.casefold().strip()
     if not q:
         raise RuntimeError(f"Missing {label} selector")
@@ -150,7 +154,9 @@ def _resolve_project(
     project_name: str | None,
 ) -> dict[str, Any]:
     projects = _fetch_projects(token, workspace_id)
-    active_projects = [project for project in projects if not bool(project.get("archived"))]
+    active_projects = [
+        project for project in projects if not bool(project.get("archived"))
+    ]
     if project_id:
         for project in active_projects:
             if str(project.get("id") or "") == project_id:
@@ -161,10 +167,17 @@ def _resolve_project(
         for project in active_projects:
             cloned = dict(project)
             cloned["_search_name"] = " / ".join(
-                part for part in [str(project.get("clientName") or "").strip(), str(project.get("name") or "").strip()] if part
+                part
+                for part in [
+                    str(project.get("clientName") or "").strip(),
+                    str(project.get("name") or "").strip(),
+                ]
+                if part
             )
             searchable.append(cloned)
-        matched = _match_single(searchable, key="_search_name", query=project_name, label="project")
+        matched = _match_single(
+            searchable, key="_search_name", query=project_name, label="project"
+        )
         matched.pop("_search_name", None)
         return matched
     raise RuntimeError("Specify --project-id or --project")
@@ -180,7 +193,11 @@ def _resolve_task(
 ) -> dict[str, Any] | None:
     if task_id is None and task_name is None:
         return None
-    tasks = [task for task in _fetch_project_tasks(token, workspace_id, project_id) if not bool(task.get("archived"))]
+    tasks = [
+        task
+        for task in _fetch_project_tasks(token, workspace_id, project_id)
+        if not bool(task.get("archived"))
+    ]
     if task_id:
         for task in tasks:
             if str(task.get("id") or "") == task_id:
@@ -214,7 +231,9 @@ def _fetch_time_entries(
 def _normalize_time_entry(entry: dict[str, Any]) -> dict[str, Any]:
     project = entry.get("project") if isinstance(entry.get("project"), dict) else {}
     task = entry.get("task") if isinstance(entry.get("task"), dict) else {}
-    time_interval = entry.get("timeInterval") if isinstance(entry.get("timeInterval"), dict) else {}
+    time_interval = (
+        entry.get("timeInterval") if isinstance(entry.get("timeInterval"), dict) else {}
+    )
     duration = str(time_interval.get("duration") or "")
     return {
         "id": str(entry.get("id") or ""),
@@ -238,7 +257,13 @@ def _normalize_time_entry(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _matches_entry(entry: dict[str, Any], *, query: str | None, project_query: str | None, task_query: str | None) -> bool:
+def _matches_entry(
+    entry: dict[str, Any],
+    *,
+    query: str | None,
+    project_query: str | None,
+    task_query: str | None,
+) -> bool:
     if query:
         q = query.casefold()
         desc = str(entry.get("description") or "")
@@ -256,7 +281,12 @@ def _matches_entry(entry: dict[str, Any], *, query: str | None, project_query: s
     if project_query:
         project = entry.get("project") if isinstance(entry.get("project"), dict) else {}
         rendered = " / ".join(
-            part for part in [str(project.get("clientName") or "").strip(), str(project.get("name") or "").strip()] if part
+            part
+            for part in [
+                str(project.get("clientName") or "").strip(),
+                str(project.get("name") or "").strip(),
+            ]
+            if part
         )
         if project_query.casefold() not in rendered.casefold():
             return False
@@ -301,24 +331,49 @@ def command_projects(args: argparse.Namespace) -> None:
         if not args.include_archived and bool(project.get("archived")):
             continue
         rendered = " / ".join(
-            part for part in [str(project.get("clientName") or "").strip(), str(project.get("name") or "").strip()] if part
+            part
+            for part in [
+                str(project.get("clientName") or "").strip(),
+                str(project.get("name") or "").strip(),
+            ]
+            if part
         )
         if args.query and args.query.casefold() not in rendered.casefold():
             continue
         filtered.append(_normalize_project(project))
 
-    filtered.sort(key=lambda item: (item["clientName"].casefold(), item["name"].casefold()))
-    print(json.dumps({"count": len(filtered), "projects": filtered[: args.limit]}, ensure_ascii=False, indent=2))
+    filtered.sort(
+        key=lambda item: (item["clientName"].casefold(), item["name"].casefold())
+    )
+    print(
+        json.dumps(
+            {"count": len(filtered), "projects": filtered[: args.limit]},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 def command_tasks(args: argparse.Namespace) -> None:
     token = _load_clockify_token()
     user = _get_current_user(token)
     workspace_id = _active_workspace_id(user)
-    project = _resolve_project(token, workspace_id, project_id=args.project_id, project_name=args.project)
-    tasks = [task for task in _fetch_project_tasks(token, workspace_id, str(project.get("id") or "")) if not bool(task.get("archived"))]
+    project = _resolve_project(
+        token, workspace_id, project_id=args.project_id, project_name=args.project
+    )
+    tasks = [
+        task
+        for task in _fetch_project_tasks(
+            token, workspace_id, str(project.get("id") or "")
+        )
+        if not bool(task.get("archived"))
+    ]
     if args.query:
-        tasks = [task for task in tasks if args.query.casefold() in str(task.get("name") or "").casefold()]
+        tasks = [
+            task
+            for task in tasks
+            if args.query.casefold() in str(task.get("name") or "").casefold()
+        ]
     out = {
         "project": _normalize_project(project),
         "count": len(tasks),
@@ -349,10 +404,18 @@ def command_list(args: argparse.Namespace) -> None:
     filtered = [
         entry
         for entry in normalized
-        if _matches_entry(entry, query=args.query, project_query=args.project, task_query=args.task)
+        if _matches_entry(
+            entry, query=args.query, project_query=args.project, task_query=args.task
+        )
     ]
     filtered.sort(key=lambda item: str(item["timeInterval"]["start"] or ""))
-    print(json.dumps({"count": len(filtered), "entries": filtered[: args.limit]}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {"count": len(filtered), "entries": filtered[: args.limit]},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 def command_summary(args: argparse.Namespace) -> None:
@@ -383,7 +446,12 @@ def command_summary(args: argparse.Namespace) -> None:
         if not isinstance(item, dict):
             continue
         rendered = " / ".join(
-            part for part in [str(item.get("clientName") or "").strip(), str(item.get("name") or "").strip()] if part
+            part
+            for part in [
+                str(item.get("clientName") or "").strip(),
+                str(item.get("name") or "").strip(),
+            ]
+            if part
         )
         if args.project and args.project.casefold() not in rendered.casefold():
             continue
@@ -425,7 +493,9 @@ def command_create_entry(args: argparse.Namespace) -> None:
     workspace_id = _active_workspace_id(user)
     user_id = str(user.get("id") or "")
 
-    project = _resolve_project(token, workspace_id, project_id=args.project_id, project_name=args.project)
+    project = _resolve_project(
+        token, workspace_id, project_id=args.project_id, project_name=args.project
+    )
     task = _resolve_task(
         token,
         workspace_id,
@@ -458,7 +528,9 @@ def command_create_entry(args: argparse.Namespace) -> None:
         token=token,
         payload=payload,
     )
-    print(json.dumps(_normalize_time_entry(created or {}), ensure_ascii=False, indent=2))
+    print(
+        json.dumps(_normalize_time_entry(created or {}), ensure_ascii=False, indent=2)
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -471,10 +543,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_whoami = sub.add_parser("whoami", help="Show the current Clockify token owner and active workspace")
+    p_whoami = sub.add_parser(
+        "whoami", help="Show the current Clockify token owner and active workspace"
+    )
     p_whoami.set_defaults(func=command_whoami)
 
-    p_projects = sub.add_parser("projects", help="List active projects in the current workspace")
+    p_projects = sub.add_parser(
+        "projects", help="List active projects in the current workspace"
+    )
     p_projects.add_argument("--query")
     p_projects.add_argument("--include-archived", action="store_true")
     p_projects.add_argument("--limit", type=int, default=50)
@@ -487,28 +563,57 @@ def main(argv: list[str] | None = None) -> int:
     p_tasks.add_argument("--limit", type=int, default=50)
     p_tasks.set_defaults(func=command_tasks)
 
-    p_list = sub.add_parser("list", help="List only the current user's time entries in a date window")
-    p_list.add_argument("--start", required=True, help="ISO datetime, for example 2026-03-01T00:00:00+01:00")
-    p_list.add_argument("--end", required=True, help="ISO datetime, for example 2026-03-08T00:00:00+01:00")
+    p_list = sub.add_parser(
+        "list", help="List only the current user's time entries in a date window"
+    )
+    p_list.add_argument(
+        "--start",
+        required=True,
+        help="ISO datetime, for example 2026-03-01T00:00:00+01:00",
+    )
+    p_list.add_argument(
+        "--end",
+        required=True,
+        help="ISO datetime, for example 2026-03-08T00:00:00+01:00",
+    )
     p_list.add_argument("--query")
     p_list.add_argument("--project")
     p_list.add_argument("--task")
     p_list.add_argument("--limit", type=int, default=100)
     p_list.set_defaults(func=command_list)
 
-    p_summary = sub.add_parser("summary", help="Summarize only the current user's time by project in a date window")
-    p_summary.add_argument("--start", required=True, help="ISO datetime, for example 2026-03-01T00:00:00+01:00")
-    p_summary.add_argument("--end", required=True, help="ISO datetime, for example 2026-03-08T00:00:00+01:00")
+    p_summary = sub.add_parser(
+        "summary",
+        help="Summarize only the current user's time by project in a date window",
+    )
+    p_summary.add_argument(
+        "--start",
+        required=True,
+        help="ISO datetime, for example 2026-03-01T00:00:00+01:00",
+    )
+    p_summary.add_argument(
+        "--end",
+        required=True,
+        help="ISO datetime, for example 2026-03-08T00:00:00+01:00",
+    )
     p_summary.add_argument("--project")
     p_summary.set_defaults(func=command_summary)
 
-    p_create = sub.add_parser("create-entry", help="Create a new time entry for the current token owner only")
+    p_create = sub.add_parser(
+        "create-entry", help="Create a new time entry for the current token owner only"
+    )
     p_create.add_argument("--project-id")
     p_create.add_argument("--project")
     p_create.add_argument("--task-id")
     p_create.add_argument("--task")
-    p_create.add_argument("--start", required=True, help="ISO datetime, for example 2026-03-11T09:00:00+01:00")
-    p_create.add_argument("--end", help="ISO datetime. If omitted, --duration-minutes is used.")
+    p_create.add_argument(
+        "--start",
+        required=True,
+        help="ISO datetime, for example 2026-03-11T09:00:00+01:00",
+    )
+    p_create.add_argument(
+        "--end", help="ISO datetime. If omitted, --duration-minutes is used."
+    )
     p_create.add_argument("--duration-minutes", type=int, default=60)
     p_create.add_argument("--description")
     p_create.add_argument("--billable", action="store_true")

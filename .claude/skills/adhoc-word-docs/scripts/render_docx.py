@@ -73,7 +73,9 @@ def calc_dpi_via_pdf(input_path: str, max_w_px: int, max_h_px: int) -> int:
             stem = splitext(basename(input_path))[0]
             pdf_path = convert_to_pdf(input_path, user_profile, convert_tmp_dir, stem)
             if not (pdf_path and exists(pdf_path)):
-                raise RuntimeError("Failed to convert input to PDF for DPI computation.")
+                raise RuntimeError(
+                    "Failed to convert input to PDF for DPI computation."
+                )
 
             info = pdfinfo_from_path(pdf_path)
             size_val = info.get("Page size")
@@ -262,7 +264,9 @@ def main() -> None:
         "--dpi",
         type=int,
         default=None,
-        help=("Override computed DPI. If provided, skips DOCX/PDF-based DPI calculation."),
+        help=(
+            "Override computed DPI. If provided, skips DOCX/PDF-based DPI calculation."
+        ),
     )
     args = parser.parse_args()
 
@@ -271,7 +275,9 @@ def main() -> None:
 
         input_path = abspath(expanduser(args.input_path))
         out_dir = (
-            abspath(expanduser(args.output_dir)) if args.output_dir else splitext(input_path)[0]
+            abspath(expanduser(args.output_dir))
+            if args.output_dir
+            else splitext(input_path)[0]
         )
 
         if args.dpi is not None:

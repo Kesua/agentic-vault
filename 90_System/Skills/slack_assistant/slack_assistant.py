@@ -243,7 +243,9 @@ def _extract_section(text: str, heading: str) -> list[str]:
     match = pattern.search(text)
     if not match:
         return []
-    return [line.rstrip() for line in match.group(1).strip().splitlines() if line.strip()]
+    return [
+        line.rstrip() for line in match.group(1).strip().splitlines() if line.strip()
+    ]
 
 
 def _merge_bullets(existing_lines: list[str], new_lines: list[str]) -> list[str]:
@@ -251,7 +253,12 @@ def _merge_bullets(existing_lines: list[str], new_lines: list[str]) -> list[str]
 
 
 def _ensure_daily_brief_path(for_day: date) -> Path:
-    path = DAILY_BRIEFS_ROOT / for_day.strftime("%Y") / for_day.strftime("%m") / f"{for_day.isoformat()}_Daily_Brief.md"
+    path = (
+        DAILY_BRIEFS_ROOT
+        / for_day.strftime("%Y")
+        / for_day.strftime("%m")
+        / f"{for_day.isoformat()}_Daily_Brief.md"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -261,8 +268,13 @@ def _append_to_daily_brief(lines: list[str]) -> None:
         return
     path = _ensure_daily_brief_path(datetime.now(PRAGUE_TZ).date())
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
-    merged = _merge_bullets(_extract_section(existing, SLACK_DAILY_BRIEF_HEADING), lines)
-    path.write_text(_replace_or_append_section(existing, SLACK_DAILY_BRIEF_HEADING, merged), encoding="utf-8")
+    merged = _merge_bullets(
+        _extract_section(existing, SLACK_DAILY_BRIEF_HEADING), lines
+    )
+    path.write_text(
+        _replace_or_append_section(existing, SLACK_DAILY_BRIEF_HEADING, merged),
+        encoding="utf-8",
+    )
     print(f"Updated Daily Brief: {path}")
 
 
@@ -319,7 +331,9 @@ def load_workspace_configs() -> dict[str, WorkspaceConfig]:
                     id=conv_id,
                     name=str(conv.get("name") or conv_id).strip(),
                     kind=str(conv.get("type") or "channel").strip(),
-                    retention_class=str(conv.get("retention_class") or "standard").strip(),
+                    retention_class=str(
+                        conv.get("retention_class") or "standard"
+                    ).strip(),
                     allow_file_download=bool(conv.get("allow_file_download", False)),
                 )
             )
@@ -327,15 +341,26 @@ def load_workspace_configs() -> dict[str, WorkspaceConfig]:
         result[alias] = WorkspaceConfig(
             alias=alias,
             team_id=str(item.get("team_id") or "").strip(),
-            token_path=(REPO_ROOT / token_file) if not Path(token_file).is_absolute() else Path(token_file),
-            jan_user_ids=tuple(str(v).strip() for v in (item.get("jan_user_ids") or []) if str(v).strip()),
+            token_path=(REPO_ROOT / token_file)
+            if not Path(token_file).is_absolute()
+            else Path(token_file),
+            jan_user_ids=tuple(
+                str(v).strip()
+                for v in (item.get("jan_user_ids") or [])
+                if str(v).strip()
+            ),
             allow_conversations=tuple(allow_conversations),
             download_policy=WorkspaceDownloadPolicy(
                 enabled=bool(download.get("enabled", False)),
-                max_bytes=int(download.get("max_bytes", DEFAULT_MAX_DOWNLOAD_BYTES) or DEFAULT_MAX_DOWNLOAD_BYTES),
+                max_bytes=int(
+                    download.get("max_bytes", DEFAULT_MAX_DOWNLOAD_BYTES)
+                    or DEFAULT_MAX_DOWNLOAD_BYTES
+                ),
                 allowed_extensions=tuple(
                     str(v).strip().lower()
-                    for v in (download.get("allowed_extensions") or DEFAULT_ALLOWED_EXTENSIONS)
+                    for v in (
+                        download.get("allowed_extensions") or DEFAULT_ALLOWED_EXTENSIONS
+                    )
                     if str(v).strip()
                 ),
             ),
@@ -348,7 +373,9 @@ def load_workspace_configs() -> dict[str, WorkspaceConfig]:
 def get_workspace_config(alias: str) -> WorkspaceConfig:
     configs = load_workspace_configs()
     if alias not in configs:
-        raise RuntimeError(f"Unknown workspace alias '{alias}'. Configured: {', '.join(sorted(configs))}")
+        raise RuntimeError(
+            f"Unknown workspace alias '{alias}'. Configured: {', '.join(sorted(configs))}"
+        )
     return configs[alias]
 
 
@@ -358,9 +385,13 @@ class SlackClient:
         try:
             self._token = self.workspace.token_path.read_text(encoding="utf-8").strip()
         except FileNotFoundError as exc:
-            raise RuntimeError(f"Missing Slack token file: {self.workspace.token_path}") from exc
+            raise RuntimeError(
+                f"Missing Slack token file: {self.workspace.token_path}"
+            ) from exc
         if not self._token:
-            raise RuntimeError(f"Slack token file is empty: {self.workspace.token_path}")
+            raise RuntimeError(
+                f"Slack token file is empty: {self.workspace.token_path}"
+            )
         self._user_cache: dict[str, dict[str, Any]] = {}
 
     def api_call(
@@ -372,7 +403,9 @@ class SlackClient:
         raw_url: str | None = None,
         binary: bool = False,
     ) -> tuple[Any, dict[str, str]]:
-        query = urllib.parse.urlencode({k: v for k, v in (params or {}).items() if v not in {"", None}}, doseq=True)
+        query = urllib.parse.urlencode(
+            {k: v for k, v in (params or {}).items() if v not in {"", None}}, doseq=True
+        )
         url = raw_url or f"https://slack.com/api/{method}"
         if query and raw_url is None:
             url += f"?{query}"
@@ -385,13 +418,17 @@ class SlackClient:
         while True:
             try:
                 with urllib.request.urlopen(request, timeout=60) as response:
-                    payload_headers = {str(k).lower(): str(v) for k, v in response.headers.items()}
+                    payload_headers = {
+                        str(k).lower(): str(v) for k, v in response.headers.items()
+                    }
                     raw = response.read()
                     if binary:
                         return raw, payload_headers
                     payload = json.loads(raw.decode("utf-8"))
                     if not payload.get("ok", False):
-                        raise RuntimeError(f"Slack API error for {method}: {payload.get('error', 'unknown_error')}")
+                        raise RuntimeError(
+                            f"Slack API error for {method}: {payload.get('error', 'unknown_error')}"
+                        )
                     return payload, payload_headers
             except urllib.error.HTTPError as exc:
                 if exc.code == 429:
@@ -399,13 +436,21 @@ class SlackClient:
                     time.sleep(max(1, retry_after))
                     continue
                 detail = exc.read().decode("utf-8", errors="replace")
-                raise RuntimeError(f"Slack API HTTP error for {method}: {exc.code} {detail}") from exc
+                raise RuntimeError(
+                    f"Slack API HTTP error for {method}: {exc.code} {detail}"
+                ) from exc
             except urllib.error.URLError as exc:
-                raise RuntimeError(f"Slack API request failed for {method}: {exc}") from exc
+                raise RuntimeError(
+                    f"Slack API request failed for {method}: {exc}"
+                ) from exc
 
     def auth_check(self) -> tuple[dict[str, Any], list[str]]:
         payload, headers = self.api_call("auth.test")
-        scopes = [item.strip() for item in headers.get("x-oauth-scopes", "").split(",") if item.strip()]
+        scopes = [
+            item.strip()
+            for item in headers.get("x-oauth-scopes", "").split(",")
+            if item.strip()
+        ]
         return payload, scopes
 
     def users(self) -> dict[str, dict[str, Any]]:
@@ -414,12 +459,16 @@ class SlackClient:
         cursor = ""
         out: dict[str, dict[str, Any]] = {}
         while True:
-            payload, _ = self.api_call("users.list", params={"cursor": cursor, "limit": 200})
+            payload, _ = self.api_call(
+                "users.list", params={"cursor": cursor, "limit": 200}
+            )
             for member in payload.get("members", []) or []:
                 user_id = str(member.get("id") or "").strip()
                 if user_id:
                     out[user_id] = member
-            cursor = str((payload.get("response_metadata") or {}).get("next_cursor") or "").strip()
+            cursor = str(
+                (payload.get("response_metadata") or {}).get("next_cursor") or ""
+            ).strip()
             if not cursor:
                 break
         self._user_cache = out
@@ -428,11 +477,18 @@ class SlackClient:
     def conversations(self, types: list[str] | None = None) -> list[SlackConversation]:
         cursor = ""
         out: list[SlackConversation] = []
-        conv_types = ",".join(types or ["public_channel", "private_channel", "im", "mpim"])
+        conv_types = ",".join(
+            types or ["public_channel", "private_channel", "im", "mpim"]
+        )
         while True:
             payload, _ = self.api_call(
                 "conversations.list",
-                params={"cursor": cursor, "limit": 200, "types": conv_types, "exclude_archived": "true"},
+                params={
+                    "cursor": cursor,
+                    "limit": 200,
+                    "types": conv_types,
+                    "exclude_archived": "true",
+                },
             )
             for item in payload.get("channels", []) or []:
                 out.append(
@@ -443,45 +499,78 @@ class SlackClient:
                         is_private=bool(item.get("is_private", False)),
                     )
                 )
-            cursor = str((payload.get("response_metadata") or {}).get("next_cursor") or "").strip()
+            cursor = str(
+                (payload.get("response_metadata") or {}).get("next_cursor") or ""
+            ).strip()
             if not cursor:
                 break
         return out
 
-    def conversation_history(self, conversation_id: str, *, oldest: str, latest: str | None = None) -> list[SlackMessage]:
+    def conversation_history(
+        self, conversation_id: str, *, oldest: str, latest: str | None = None
+    ) -> list[SlackMessage]:
         cursor = ""
         out: list[SlackMessage] = []
         while True:
-            params = {"channel": conversation_id, "cursor": cursor, "limit": 200, "oldest": oldest}
+            params = {
+                "channel": conversation_id,
+                "cursor": cursor,
+                "limit": 200,
+                "oldest": oldest,
+            }
             if latest:
                 params["latest"] = latest
             payload, _ = self.api_call("conversations.history", params=params)
-            out.extend(_normalize_message(item) for item in payload.get("messages", []) or [] if isinstance(item, dict))
-            cursor = str((payload.get("response_metadata") or {}).get("next_cursor") or "").strip()
+            out.extend(
+                _normalize_message(item)
+                for item in payload.get("messages", []) or []
+                if isinstance(item, dict)
+            )
+            cursor = str(
+                (payload.get("response_metadata") or {}).get("next_cursor") or ""
+            ).strip()
             if not cursor:
                 break
         return sorted(out, key=lambda item: float(item.ts))
 
-    def conversation_replies(self, conversation_id: str, *, thread_ts: str) -> list[SlackMessage]:
+    def conversation_replies(
+        self, conversation_id: str, *, thread_ts: str
+    ) -> list[SlackMessage]:
         cursor = ""
         out: list[SlackMessage] = []
         while True:
             payload, _ = self.api_call(
                 "conversations.replies",
-                params={"channel": conversation_id, "ts": thread_ts, "cursor": cursor, "limit": 200},
+                params={
+                    "channel": conversation_id,
+                    "ts": thread_ts,
+                    "cursor": cursor,
+                    "limit": 200,
+                },
             )
-            out.extend(_normalize_message(item) for item in payload.get("messages", []) or [] if isinstance(item, dict))
-            cursor = str((payload.get("response_metadata") or {}).get("next_cursor") or "").strip()
+            out.extend(
+                _normalize_message(item)
+                for item in payload.get("messages", []) or []
+                if isinstance(item, dict)
+            )
+            cursor = str(
+                (payload.get("response_metadata") or {}).get("next_cursor") or ""
+            ).strip()
             if not cursor:
                 break
         return sorted(out, key=lambda item: float(item.ts))
 
     def permalink(self, conversation_id: str, message_ts: str) -> str:
-        payload, _ = self.api_call("chat.getPermalink", params={"channel": conversation_id, "message_ts": message_ts})
+        payload, _ = self.api_call(
+            "chat.getPermalink",
+            params={"channel": conversation_id, "message_ts": message_ts},
+        )
         return str(payload.get("permalink") or "")
 
     def download_file(self, file: SlackFile) -> bytes:
-        raw, _ = self.api_call("files.download", raw_url=file.url_private_download, binary=True)
+        raw, _ = self.api_call(
+            "files.download", raw_url=file.url_private_download, binary=True
+        )
         return raw
 
 
@@ -508,7 +597,9 @@ def _normalize_message(raw: dict[str, Any]) -> SlackMessage:
             name=str(item.get("name") or item.get("title") or "file"),
             mimetype=str(item.get("mimetype") or item.get("filetype") or ""),
             size=int(item.get("size") or 0),
-            url_private_download=str(item.get("url_private_download") or item.get("url_private") or ""),
+            url_private_download=str(
+                item.get("url_private_download") or item.get("url_private") or ""
+            ),
         )
         for item in (raw.get("files") or [])
         if isinstance(item, dict)
@@ -520,7 +611,9 @@ def _normalize_message(raw: dict[str, Any]) -> SlackMessage:
     )
     subtype = str(raw.get("subtype") or "").strip()
     previous = raw.get("previous_message")
-    deleted = subtype == "message_deleted" or bool(previous and str(previous.get("text") or "").strip() == "")
+    deleted = subtype == "message_deleted" or bool(
+        previous and str(previous.get("text") or "").strip() == ""
+    )
     edited = bool(raw.get("edited"))
     return SlackMessage(
         ts=str(raw.get("ts") or ""),
@@ -541,7 +634,12 @@ def _normalize_message(raw: dict[str, Any]) -> SlackMessage:
 
 
 def _message_text(raw: dict[str, Any]) -> str:
-    text = str(raw.get("text") or "").replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+    text = (
+        str(raw.get("text") or "")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+    )
     text = re.sub(r"<@([A-Z0-9]+)>", r"@\1", text)
     text = re.sub(r"<#([A-Z0-9]+)\|([^>]+)>", r"#\2", text)
     text = re.sub(r"<([^>|]+)\|([^>]+)>", r"\2 (\1)", text)
@@ -576,7 +674,9 @@ def _is_human_message(message: SlackMessage) -> bool:
     return True
 
 
-def _root_candidates(messages: list[SlackMessage], conversation: ConversationConfig) -> list[SlackMessage]:
+def _root_candidates(
+    messages: list[SlackMessage], conversation: ConversationConfig
+) -> list[SlackMessage]:
     if conversation.kind in {"im", "mpim"}:
         return [message for message in messages if _is_human_message(message)]
     out: list[SlackMessage] = []
@@ -588,8 +688,14 @@ def _root_candidates(messages: list[SlackMessage], conversation: ConversationCon
     return out
 
 
-def _thread_messages(client: SlackClient, conversation: ConversationConfig, root: SlackMessage) -> list[SlackMessage]:
-    if conversation.kind in {"im", "mpim"} and root.reply_count == 0 and root.thread_ts == root.ts:
+def _thread_messages(
+    client: SlackClient, conversation: ConversationConfig, root: SlackMessage
+) -> list[SlackMessage]:
+    if (
+        conversation.kind in {"im", "mpim"}
+        and root.reply_count == 0
+        and root.thread_ts == root.ts
+    ):
         return [root]
     if root.reply_count > 0 or root.thread_ts != root.ts:
         replies = client.conversation_replies(conversation.id, thread_ts=root.thread_ts)
@@ -610,7 +716,9 @@ def collect_threads(
     for conversation in workspace.allow_conversations:
         if conversation_ids and conversation.id not in conversation_ids:
             continue
-        history = client.conversation_history(conversation.id, oldest=oldest, latest=latest)
+        history = client.conversation_history(
+            conversation.id, oldest=oldest, latest=latest
+        )
         for root in _root_candidates(history, conversation):
             messages = _thread_messages(client, conversation, root)
             if not messages:
@@ -621,7 +729,9 @@ def collect_threads(
                     team_id=workspace.team_id,
                     conversation=conversation,
                     root_ts=messages[0].thread_ts or messages[0].ts,
-                    permalink=client.permalink(conversation.id, messages[0].thread_ts or messages[0].ts),
+                    permalink=client.permalink(
+                        conversation.id, messages[0].thread_ts or messages[0].ts
+                    ),
                     messages=tuple(messages),
                 )
             )
@@ -629,9 +739,13 @@ def collect_threads(
     for item in items:
         key = (item.conversation.id, item.root_ts)
         existing = deduped.get(key)
-        if existing is None or float(item.messages[-1].ts) > float(existing.messages[-1].ts):
+        if existing is None or float(item.messages[-1].ts) > float(
+            existing.messages[-1].ts
+        ):
             deduped[key] = item
-    return sorted(deduped.values(), key=lambda item: float(item.messages[-1].ts), reverse=True)
+    return sorted(
+        deduped.values(), key=lambda item: float(item.messages[-1].ts), reverse=True
+    )
 
 
 def runtime_state_path(alias: str) -> Path:
@@ -651,7 +765,9 @@ def load_runtime_state(alias: str) -> dict[str, Any]:
 
 def save_runtime_state(alias: str, state: dict[str, Any]) -> None:
     path = runtime_state_path(alias)
-    path.write_text(json.dumps(state, ensure_ascii=True, indent=2, sort_keys=True), encoding="utf-8")
+    path.write_text(
+        json.dumps(state, ensure_ascii=True, indent=2, sort_keys=True), encoding="utf-8"
+    )
 
 
 def people_lookup() -> tuple[dict[str, Path], dict[str, Path]]:
@@ -693,7 +809,9 @@ def find_matching_person(
     return ""
 
 
-def summarize_thread_text(workspace: WorkspaceConfig, thread: ConversationThread) -> str:
+def summarize_thread_text(
+    workspace: WorkspaceConfig, thread: ConversationThread
+) -> str:
     client = SlackClient(workspace)
     user_map = client.users()
     lines = [
@@ -742,7 +860,9 @@ def list_unanswered_threads(
     return result
 
 
-def _render_slack_lines_for_inbox(prefix: str, threads: list[ConversationThread]) -> list[str]:
+def _render_slack_lines_for_inbox(
+    prefix: str, threads: list[ConversationThread]
+) -> list[str]:
     now = datetime.now(PRAGUE_TZ).strftime("%Y-%m-%d %H:%M")
     lines: list[str] = []
     for thread in threads:
@@ -780,7 +900,9 @@ def command_search(args: argparse.Namespace) -> None:
     user_map = client.users()
     by_email, by_alias = people_lookup()
     matched = 0
-    for thread in collect_threads(workspace, oldest=oldest, conversation_ids=conversation_ids):
+    for thread in collect_threads(
+        workspace, oldest=oldest, conversation_ids=conversation_ids
+    ):
         if matched >= args.max_results:
             break
         haystack = " ".join(
@@ -788,26 +910,40 @@ def command_search(args: argparse.Namespace) -> None:
                 thread.conversation.name,
                 thread.permalink,
                 " ".join(message.text for message in thread.messages),
-                " ".join(find_matching_person(user_map, message, by_email, by_alias) for message in thread.messages),
+                " ".join(
+                    find_matching_person(user_map, message, by_email, by_alias)
+                    for message in thread.messages
+                ),
             ]
         ).casefold()
         if query not in haystack:
             continue
         latest = thread.messages[-1]
         preview = re.sub(r"\s+", " ", latest.text).strip()[:180] or "(No text)"
-        print(f"{_message_dt(latest.ts).isoformat(timespec='minutes')} | {thread.conversation.name} | {thread.root_ts} | {preview}")
+        print(
+            f"{_message_dt(latest.ts).isoformat(timespec='minutes')} | {thread.conversation.name} | {thread.root_ts} | {preview}"
+        )
         matched += 1
     print(f"Threads matched: {matched}")
 
 
-def _find_thread(workspace: WorkspaceConfig, conversation_id: str, thread_ts: str) -> ConversationThread:
-    conversation = next((item for item in workspace.allow_conversations if item.id == conversation_id), None)
+def _find_thread(
+    workspace: WorkspaceConfig, conversation_id: str, thread_ts: str
+) -> ConversationThread:
+    conversation = next(
+        (item for item in workspace.allow_conversations if item.id == conversation_id),
+        None,
+    )
     if conversation is None:
-        raise RuntimeError(f"Conversation '{conversation_id}' is not allowlisted for workspace '{workspace.alias}'")
+        raise RuntimeError(
+            f"Conversation '{conversation_id}' is not allowlisted for workspace '{workspace.alias}'"
+        )
     client = SlackClient(workspace)
     messages = client.conversation_replies(conversation_id, thread_ts=thread_ts)
     if not messages:
-        messages = client.conversation_history(conversation_id, oldest=thread_ts, latest=thread_ts)
+        messages = client.conversation_history(
+            conversation_id, oldest=thread_ts, latest=thread_ts
+        )
     if not messages:
         raise RuntimeError(f"Thread not found: {conversation_id} {thread_ts}")
     return ConversationThread(
@@ -820,7 +956,9 @@ def _find_thread(workspace: WorkspaceConfig, conversation_id: str, thread_ts: st
     )
 
 
-def _eligible_file(workspace: WorkspaceConfig, conversation: ConversationConfig, file: SlackFile) -> tuple[bool, str]:
+def _eligible_file(
+    workspace: WorkspaceConfig, conversation: ConversationConfig, file: SlackFile
+) -> tuple[bool, str]:
     if not workspace.download_policy.enabled:
         return False, "workspace download disabled"
     if not conversation.allow_file_download:
@@ -835,7 +973,9 @@ def _eligible_file(workspace: WorkspaceConfig, conversation: ConversationConfig,
     return True, ""
 
 
-def _attachment_output_dir(workspace: WorkspaceConfig, thread: ConversationThread, explicit_dir: str | None) -> Path:
+def _attachment_output_dir(
+    workspace: WorkspaceConfig, thread: ConversationThread, explicit_dir: str | None
+) -> Path:
     if explicit_dir:
         path = Path(explicit_dir)
         return path if path.is_absolute() else REPO_ROOT / path
@@ -867,7 +1007,9 @@ def command_summarize_thread(args: argparse.Namespace) -> None:
     if args.to_inbox:
         _append_to_inbox(_render_slack_lines_for_inbox("Slack thread", [thread]))
     if args.to_daily_brief:
-        _append_to_daily_brief([f"- Slack thread: {thread.conversation.name} ({thread.root_ts})"])
+        _append_to_daily_brief(
+            [f"- Slack thread: {thread.conversation.name} ({thread.root_ts})"]
+        )
 
 
 def command_download_files(args: argparse.Namespace) -> None:
@@ -888,7 +1030,9 @@ def command_download_files(args: argparse.Namespace) -> None:
             seen_names[base_name.casefold()] = seen_count + 1
             stem = Path(base_name).stem
             ext = Path(base_name).suffix
-            output_name = base_name if seen_count == 0 else f"{stem}_{seen_count + 1}{ext}"
+            output_name = (
+                base_name if seen_count == 0 else f"{stem}_{seen_count + 1}{ext}"
+            )
             destination = target_dir / output_name
             if args.dry_run:
                 print(f"Would save: {destination} ({file.mimetype}, {file.size} bytes)")
@@ -915,12 +1059,19 @@ def command_list_unanswered(args: argparse.Namespace) -> None:
     for thread in threads:
         latest = thread.messages[-1]
         preview = re.sub(r"\s+", " ", latest.text).strip()[:180] or "(No text)"
-        print(f"{_message_dt(latest.ts).isoformat(timespec='minutes')} | {thread.conversation.name} | {thread.root_ts} | waiting on reply | {preview}")
+        print(
+            f"{_message_dt(latest.ts).isoformat(timespec='minutes')} | {thread.conversation.name} | {thread.root_ts} | waiting on reply | {preview}"
+        )
     print(f"Unanswered Slack threads: {len(threads)}")
     if args.to_inbox:
         _append_to_inbox(_render_slack_lines_for_inbox("Slack follow-up", threads))
     if args.to_daily_brief:
-        _append_to_daily_brief([f"- Slack follow-up: {thread.conversation.name} ({thread.root_ts})" for thread in threads])
+        _append_to_daily_brief(
+            [
+                f"- Slack follow-up: {thread.conversation.name} ({thread.root_ts})"
+                for thread in threads
+            ]
+        )
 
 
 def command_list_by_person(args: argparse.Namespace) -> None:
@@ -949,26 +1100,36 @@ def command_list_by_person(args: argparse.Namespace) -> None:
         if not any(message.user_id in matched_ids for message in thread.messages):
             continue
         latest = thread.messages[-1]
-        print(f"{_message_dt(latest.ts).isoformat(timespec='minutes')} | {thread.conversation.name} | {thread.root_ts}")
+        print(
+            f"{_message_dt(latest.ts).isoformat(timespec='minutes')} | {thread.conversation.name} | {thread.root_ts}"
+        )
         matched += 1
     print(f"Threads matched: {matched}")
 
 
 def command_draft_not_enabled(args: argparse.Namespace) -> None:
-    raise RuntimeError("Slack write support is not enabled. Configure a separate write-capable app before using draft/post commands.")
+    raise RuntimeError(
+        "Slack write support is not enabled. Configure a separate write-capable app before using draft/post commands."
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Read Slack data safely and optionally export signals into the vault.")
+    parser = argparse.ArgumentParser(
+        description="Read Slack data safely and optionally export signals into the vault."
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_auth = sub.add_parser("auth-check", help="Validate Slack token and report scopes")
     p_auth.add_argument("--workspace", required=True)
     p_auth.set_defaults(func=command_auth_check)
 
-    p_conversations = sub.add_parser("list-conversations", help="List accessible Slack conversations")
+    p_conversations = sub.add_parser(
+        "list-conversations", help="List accessible Slack conversations"
+    )
     p_conversations.add_argument("--workspace", required=True)
-    p_conversations.add_argument("--types", default="public_channel,private_channel,im,mpim")
+    p_conversations.add_argument(
+        "--types", default="public_channel,private_channel,im,mpim"
+    )
     p_conversations.set_defaults(func=command_list_conversations)
 
     p_search = sub.add_parser("search", help="Search allowlisted Slack threads by text")
@@ -988,7 +1149,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_summary.add_argument("--dry-run", action="store_true")
     p_summary.set_defaults(func=command_summarize_thread)
 
-    p_download = sub.add_parser("download-files", help="Download eligible files from a Slack thread into the vault")
+    p_download = sub.add_parser(
+        "download-files",
+        help="Download eligible files from a Slack thread into the vault",
+    )
     p_download.add_argument("--workspace", required=True)
     p_download.add_argument("--conversation", required=True)
     p_download.add_argument("--thread-ts", required=True)
@@ -996,7 +1160,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_download.add_argument("--dry-run", action="store_true")
     p_download.set_defaults(func=command_download_files)
 
-    p_unanswered = sub.add_parser("list-unanswered", help="List Slack threads waiting on your reply")
+    p_unanswered = sub.add_parser(
+        "list-unanswered", help="List Slack threads waiting on your reply"
+    )
     p_unanswered.add_argument("--workspace", required=True)
     p_unanswered.add_argument("--days-back", type=int, default=None)
     p_unanswered.add_argument("--max-results", type=int, default=20)
@@ -1006,18 +1172,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_unanswered.add_argument("--to-daily-brief", action="store_true")
     p_unanswered.set_defaults(func=command_list_unanswered)
 
-    p_person = sub.add_parser("list-by-person", help="List Slack threads by person/email")
+    p_person = sub.add_parser(
+        "list-by-person", help="List Slack threads by person/email"
+    )
     p_person.add_argument("--workspace", required=True)
     p_person.add_argument("--person", required=True)
     p_person.add_argument("--days-back", type=int, default=None)
     p_person.add_argument("--max-results", type=int, default=20)
     p_person.set_defaults(func=command_list_by_person)
 
-    p_draft = sub.add_parser("draft-message", help="Reserved for future separate write-capable Slack app")
+    p_draft = sub.add_parser(
+        "draft-message", help="Reserved for future separate write-capable Slack app"
+    )
     p_draft.add_argument("--workspace", required=True)
     p_draft.set_defaults(func=command_draft_not_enabled)
 
-    p_reply = sub.add_parser("draft-reply", help="Reserved for future separate write-capable Slack app")
+    p_reply = sub.add_parser(
+        "draft-reply", help="Reserved for future separate write-capable Slack app"
+    )
     p_reply.add_argument("--workspace", required=True)
     p_reply.set_defaults(func=command_draft_not_enabled)
 

@@ -209,7 +209,13 @@ def _replace_section(body: str, section_heading: str, lines: list[str]) -> str:
     return body.rstrip() + "\n\n" + replacement
 
 
-def _new_task_body(title: str, request: str, desired_outcome: str, constraints: list[str], blocked_reason: str) -> str:
+def _new_task_body(
+    title: str,
+    request: str,
+    desired_outcome: str,
+    constraints: list[str],
+    blocked_reason: str,
+) -> str:
     request_lines = request.strip() or "(empty request)"
     outcome_lines = desired_outcome.strip() or "(outcome not specified)"
     constraint_lines = constraints or ["(none recorded)"]
@@ -327,13 +333,19 @@ def command_list(args: argparse.Namespace) -> int:
     _ensure_dirs()
     tasks = [_load_task(path) for path in _all_task_paths(status=args.status)]
     if args.json:
-        print(json.dumps([_task_summary(task) for task in tasks], ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                [_task_summary(task) for task in tasks], ensure_ascii=False, indent=2
+            )
+        )
         return 0
     if not tasks:
         print("No tasks found.")
         return 0
     for task in tasks:
-        print(f"{task.task_id} | {task.status} | {task.title} | {task.path.relative_to(REPO_ROOT)}")
+        print(
+            f"{task.task_id} | {task.status} | {task.title} | {task.path.relative_to(REPO_ROOT)}"
+        )
     return 0
 
 
@@ -353,7 +365,9 @@ def command_claim_next(args: argparse.Namespace) -> int:
     task.meta["claimed_at"] = _now()
     task.meta["updated_at"] = _now()
     task.meta["attempt_count"] = task.attempt_count + 1
-    task.body = _append_line(task.body, "Execution Notes", f"Claimed by `{args.worker}`.")
+    task.body = _append_line(
+        task.body, "Execution Notes", f"Claimed by `{args.worker}`."
+    )
     _write_task(task.path, task.meta, task.body)
     task = _move_task(_load_task(task.path), "running")
     if args.json:
@@ -393,7 +407,9 @@ def command_render_prompt(args: argparse.Namespace) -> int:
     return 0
 
 
-def _update_terminal_state(task: TaskRecord, *, new_status: str, summary: str, retryable: bool) -> TaskRecord:
+def _update_terminal_state(
+    task: TaskRecord, *, new_status: str, summary: str, retryable: bool
+) -> TaskRecord:
     task.meta["updated_at"] = _now()
     if new_status == "done":
         task.meta["status"] = "done"
@@ -411,13 +427,17 @@ def _update_terminal_state(task: TaskRecord, *, new_status: str, summary: str, r
     note_text = f"{marker.lower()} with summary: {summary}"
     task.body = _append_line(task.body, "Execution Notes", note_text)
     _write_task(task.path, task.meta, task.body)
-    destination_status = "pending" if retryable and new_status != "done" else task.meta["status"]
+    destination_status = (
+        "pending" if retryable and new_status != "done" else task.meta["status"]
+    )
     return _move_task(_load_task(task.path), str(destination_status))
 
 
 def command_complete(args: argparse.Namespace) -> int:
     task = _find_task(args.task)
-    updated = _update_terminal_state(task, new_status="done", summary=args.summary.strip(), retryable=False)
+    updated = _update_terminal_state(
+        task, new_status="done", summary=args.summary.strip(), retryable=False
+    )
     if args.json:
         print(json.dumps(_task_summary(updated), ensure_ascii=False, indent=2))
     else:
@@ -428,7 +448,9 @@ def command_complete(args: argparse.Namespace) -> int:
 def command_fail(args: argparse.Namespace) -> int:
     task = _find_task(args.task)
     retryable = bool(args.retryable) and task.attempt_count < task.max_attempts
-    updated = _update_terminal_state(task, new_status="failed", summary=args.summary.strip(), retryable=retryable)
+    updated = _update_terminal_state(
+        task, new_status="failed", summary=args.summary.strip(), retryable=retryable
+    )
     if args.json:
         print(json.dumps(_task_summary(updated), ensure_ascii=False, indent=2))
     else:
@@ -440,7 +462,9 @@ def command_fail(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Manage the deferred task queue for follow-up work that should be handled later.")
+    parser = argparse.ArgumentParser(
+        description="Manage the deferred task queue for follow-up work that should be handled later."
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_enqueue = sub.add_parser("enqueue", help="Create a new pending deferred task")
@@ -448,7 +472,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_enqueue.add_argument("--source", default="deferred_follow_up")
     p_enqueue.add_argument("--requested-by", required=True)
     p_enqueue.add_argument("--chat-id", default="")
-    p_enqueue.add_argument("--priority", default="normal", choices=["low", "normal", "high"])
+    p_enqueue.add_argument(
+        "--priority", default="normal", choices=["low", "normal", "high"]
+    )
     p_enqueue.add_argument("--blocked-by", required=True)
     p_enqueue.add_argument("--blocked-reason", default="")
     p_enqueue.add_argument("--request", required=True)
@@ -465,12 +491,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_list.add_argument("--json", action="store_true")
     p_list.set_defaults(func=command_list)
 
-    p_claim = sub.add_parser("claim-next", help="Move the oldest pending task to running")
+    p_claim = sub.add_parser(
+        "claim-next", help="Move the oldest pending task to running"
+    )
     p_claim.add_argument("--worker", required=True)
     p_claim.add_argument("--json", action="store_true")
     p_claim.set_defaults(func=command_claim_next)
 
-    p_render = sub.add_parser("render-prompt", help="Render a deterministic desktop-runner prompt for a task")
+    p_render = sub.add_parser(
+        "render-prompt", help="Render a deterministic desktop-runner prompt for a task"
+    )
     p_render.add_argument("--task", required=True)
     p_render.set_defaults(func=command_render_prompt)
 
@@ -480,7 +510,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_complete.add_argument("--json", action="store_true")
     p_complete.set_defaults(func=command_complete)
 
-    p_fail = sub.add_parser("fail", help="Mark a task as failed or return it to pending")
+    p_fail = sub.add_parser(
+        "fail", help="Mark a task as failed or return it to pending"
+    )
     p_fail.add_argument("--task", required=True)
     p_fail.add_argument("--summary", required=True)
     p_fail.add_argument("--retryable", action="store_true")

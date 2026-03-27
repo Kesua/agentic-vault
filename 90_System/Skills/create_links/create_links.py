@@ -63,7 +63,11 @@ class AliasMatcher:
     def __init__(self, registry: dict[str, AliasTarget]) -> None:
         self._registry = registry
         aliases = sorted(registry, key=lambda value: (-len(value), value))
-        self._pattern = re.compile("|".join(re.escape(alias) for alias in aliases)) if aliases else None
+        self._pattern = (
+            re.compile("|".join(re.escape(alias) for alias in aliases))
+            if aliases
+            else None
+        )
 
     @property
     def alias_count(self) -> int:
@@ -108,7 +112,11 @@ def _iter_markdown_files(root: Path) -> list[Path]:
     if not root.exists():
         return []
     return sorted(
-        (path for path in root.rglob("*.md") if path.is_file() and not _is_within_submodule(path)),
+        (
+            path
+            for path in root.rglob("*.md")
+            if path.is_file() and not _is_within_submodule(path)
+        ),
         key=lambda path: path.as_posix().lower(),
     )
 
@@ -303,7 +311,11 @@ def _split_inline_list(text: str) -> list[str]:
 
 
 def _unquote_scalar(raw_value: str) -> str:
-    if len(raw_value) >= 2 and raw_value[0] == raw_value[-1] and raw_value[0] in ("'", '"'):
+    if (
+        len(raw_value) >= 2
+        and raw_value[0] == raw_value[-1]
+        and raw_value[0] in ("'", '"')
+    ):
         quote = raw_value[0]
         inner = raw_value[1:-1]
         if quote == '"':
@@ -312,7 +324,9 @@ def _unquote_scalar(raw_value: str) -> str:
     return raw_value
 
 
-def _build_alias_registry() -> tuple[dict[str, AliasTarget], dict[str, list[AliasTarget]]]:
+def _build_alias_registry() -> tuple[
+    dict[str, AliasTarget], dict[str, list[AliasTarget]]
+]:
     alias_map: dict[str, list[AliasTarget]] = defaultdict(list)
 
     for expected_type, root in ENTITY_SOURCE_DIRS.items():
@@ -330,7 +344,9 @@ def _build_alias_registry() -> tuple[dict[str, AliasTarget], dict[str, list[Alia
 
             relative_path = path.relative_to(REPO_ROOT)
             target_link_path = (
-                path.stem if expected_type == "person" else relative_path.with_suffix("").as_posix()
+                path.stem
+                if expected_type == "person"
+                else relative_path.with_suffix("").as_posix()
             )
             source_file = relative_path.as_posix()
 
@@ -353,7 +369,8 @@ def _build_alias_registry() -> tuple[dict[str, AliasTarget], dict[str, list[Alia
     ambiguous: dict[str, list[AliasTarget]] = {}
     for alias_text, targets in alias_map.items():
         unique_targets = {
-            (target.target_type, target.target_link_path, target.source_file): target for target in targets
+            (target.target_type, target.target_link_path, target.source_file): target
+            for target in targets
         }
         if len(unique_targets) == 1:
             registry[alias_text] = next(iter(unique_targets.values()))
@@ -372,7 +389,9 @@ def _consume_fenced_code(text: str, index: int) -> int | None:
         return None
 
     fence_start = index
-    while fence_start < len(text) and fence_start - index < 3 and text[fence_start] == " ":
+    while (
+        fence_start < len(text) and fence_start - index < 3 and text[fence_start] == " "
+    ):
         fence_start += 1
 
     if fence_start >= len(text):
@@ -383,7 +402,10 @@ def _consume_fenced_code(text: str, index: int) -> int | None:
         return None
 
     fence_len = 0
-    while fence_start + fence_len < len(text) and text[fence_start + fence_len] == fence_char:
+    while (
+        fence_start + fence_len < len(text)
+        and text[fence_start + fence_len] == fence_char
+    ):
         fence_len += 1
 
     if fence_len < 3:
@@ -394,7 +416,11 @@ def _consume_fenced_code(text: str, index: int) -> int | None:
 
     while search_index < len(text):
         candidate = search_index
-        while candidate < len(text) and candidate - search_index < 3 and text[candidate] == " ":
+        while (
+            candidate < len(text)
+            and candidate - search_index < 3
+            and text[candidate] == " "
+        ):
             candidate += 1
 
         if text.startswith(fence_char * fence_len, candidate):
@@ -563,8 +589,13 @@ def sync_links(dry_run: bool) -> int:
     replacements_made = 0
 
     for root in TARGET_DIRS:
-        all_markdown_files = sorted((path for path in root.rglob("*.md") if path.is_file()), key=lambda path: path.as_posix().lower())
-        files_skipped_submodules += sum(1 for path in all_markdown_files if _is_within_submodule(path))
+        all_markdown_files = sorted(
+            (path for path in root.rglob("*.md") if path.is_file()),
+            key=lambda path: path.as_posix().lower(),
+        )
+        files_skipped_submodules += sum(
+            1 for path in all_markdown_files if _is_within_submodule(path)
+        )
 
         for path in _iter_markdown_files(root):
             files_scanned += 1
@@ -611,7 +642,9 @@ def sync_links(dry_run: bool) -> int:
 
     if ambiguous:
         for alias_text in sorted(ambiguous)[:25]:
-            sources = ", ".join(sorted(target.source_file for target in ambiguous[alias_text]))
+            sources = ", ".join(
+                sorted(target.source_file for target in ambiguous[alias_text])
+            )
             print(f"  ! {alias_text}: {sources}")
         if len(ambiguous) > 25:
             print("  ...")
@@ -627,7 +660,9 @@ def main(argv: list[str] | None = None) -> int:
         "sync",
         help="Create Obsidian links for exact person/project/area aliases",
     )
-    sync_parser.add_argument("--dry-run", action="store_true", help="Report changes without writing files")
+    sync_parser.add_argument(
+        "--dry-run", action="store_true", help="Report changes without writing files"
+    )
 
     args = parser.parse_args(argv)
 

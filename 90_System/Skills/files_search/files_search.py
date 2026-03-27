@@ -62,7 +62,9 @@ def _normalize_ext(value: str) -> str:
 
 
 def _is_hidden(path: Path) -> bool:
-    return any(part.startswith(".") for part in path.parts if part not in (path.anchor, ""))
+    return any(
+        part.startswith(".") for part in path.parts if part not in (path.anchor, "")
+    )
 
 
 def _matches_type(path: Path, wanted: str) -> bool:
@@ -75,7 +77,9 @@ def _matches_type(path: Path, wanted: str) -> bool:
     raise ValueError(f"Unsupported type filter: {wanted}")
 
 
-def _iter_children(base: Path, recursive: bool, max_depth: int | None, include_hidden: bool) -> Iterator[Path]:
+def _iter_children(
+    base: Path, recursive: bool, max_depth: int | None, include_hidden: bool
+) -> Iterator[Path]:
     stack: list[tuple[Path, int]] = [(base, 0)]
     while stack:
         current, depth = stack.pop()
@@ -89,11 +93,17 @@ def _iter_children(base: Path, recursive: bool, max_depth: int | None, include_h
                 continue
             yield entry
             next_depth = depth + 1
-            if entry.is_dir() and recursive and (max_depth is None or next_depth <= max_depth):
+            if (
+                entry.is_dir()
+                and recursive
+                and (max_depth is None or next_depth <= max_depth)
+            ):
                 stack.append((entry, next_depth))
 
 
-def _iter_search_targets(base: Path, recursive: bool, max_depth: int | None, include_hidden: bool) -> Iterator[Path]:
+def _iter_search_targets(
+    base: Path, recursive: bool, max_depth: int | None, include_hidden: bool
+) -> Iterator[Path]:
     if base.is_file():
         if include_hidden or not _is_hidden(Path(base.name)):
             yield base
@@ -124,7 +134,9 @@ def _print_payload(payload: Any, as_json: bool) -> None:
 
 def _write_line(text: str) -> None:
     encoding = sys.stdout.encoding or "utf-8"
-    safe_text = text.encode(encoding, errors="backslashreplace").decode(encoding, errors="strict")
+    safe_text = text.encode(encoding, errors="backslashreplace").decode(
+        encoding, errors="strict"
+    )
     sys.stdout.write(safe_text + os.linesep)
 
 
@@ -133,7 +145,9 @@ def command_list(args: argparse.Namespace) -> None:
     if not base.is_dir():
         raise NotADirectoryError(f"list expects a directory path: {base}")
     rows: list[dict[str, Any]] = []
-    for entry in _iter_children(base, args.recursive, args.max_depth, args.include_hidden):
+    for entry in _iter_children(
+        base, args.recursive, args.max_depth, args.include_hidden
+    ):
         if not _matches_type(entry, args.type):
             continue
         rows.append(
@@ -150,10 +164,15 @@ def command_list(args: argparse.Namespace) -> None:
     _print_payload([row["path"] for row in rows], as_json=False)
 
 
-def _matches_find_filters(path: Path, names: list[str], globs: list[str], exts: list[str]) -> bool:
+def _matches_find_filters(
+    path: Path, names: list[str], globs: list[str], exts: list[str]
+) -> bool:
     if names and path.name not in names:
         return False
-    if globs and not any(fnmatch.fnmatch(path.name, pattern) or fnmatch.fnmatch(path.as_posix(), pattern) for pattern in globs):
+    if globs and not any(
+        fnmatch.fnmatch(path.name, pattern) or fnmatch.fnmatch(path.as_posix(), pattern)
+        for pattern in globs
+    ):
         return False
     if exts and path.suffix.casefold() not in exts:
         return False
@@ -168,7 +187,15 @@ def command_find(args: argparse.Namespace) -> None:
     globs = args.glob or []
     exts = [_normalize_ext(ext).casefold() for ext in (args.ext or [])]
     rows: list[dict[str, Any]] = []
-    targets = [base] if base.is_file() else list(_iter_search_targets(base, args.recursive, args.max_depth, args.include_hidden))
+    targets = (
+        [base]
+        if base.is_file()
+        else list(
+            _iter_search_targets(
+                base, args.recursive, args.max_depth, args.include_hidden
+            )
+        )
+    )
     for target in sorted(targets, key=lambda item: str(item).casefold()):
         if not _matches_type(target, args.type):
             continue
@@ -201,8 +228,14 @@ def _is_probably_text(path: Path) -> bool:
     return True
 
 
-def _iter_text_files(base: Path, recursive: bool, max_depth: int | None, include_hidden: bool) -> Iterator[Path]:
-    targets = [base] if base.is_file() else _iter_search_targets(base, recursive, max_depth, include_hidden)
+def _iter_text_files(
+    base: Path, recursive: bool, max_depth: int | None, include_hidden: bool
+) -> Iterator[Path]:
+    targets = (
+        [base]
+        if base.is_file()
+        else _iter_search_targets(base, recursive, max_depth, include_hidden)
+    )
     for target in targets:
         if not target.is_file():
             continue
@@ -223,10 +256,17 @@ def command_search_text(args: argparse.Namespace) -> None:
     allowed_exts = {_normalize_ext(ext).casefold() for ext in (args.ext or [])}
     globs = args.glob or []
 
-    for text_file in sorted(_iter_text_files(base, args.recursive, args.max_depth, args.include_hidden), key=lambda item: str(item).casefold()):
+    for text_file in sorted(
+        _iter_text_files(base, args.recursive, args.max_depth, args.include_hidden),
+        key=lambda item: str(item).casefold(),
+    ):
         if allowed_exts and text_file.suffix.casefold() not in allowed_exts:
             continue
-        if globs and not any(fnmatch.fnmatch(text_file.name, pattern) or fnmatch.fnmatch(text_file.as_posix(), pattern) for pattern in globs):
+        if globs and not any(
+            fnmatch.fnmatch(text_file.name, pattern)
+            or fnmatch.fnmatch(text_file.as_posix(), pattern)
+            for pattern in globs
+        ):
             continue
         try:
             with text_file.open("r", encoding="utf-8-sig", errors="strict") as handle:
@@ -240,7 +280,9 @@ def command_search_text(args: argparse.Namespace) -> None:
                         {
                             "path": _format_path(base, text_file),
                             "line": line_number,
-                            "excerpt": _excerpt(line, index, index + len(args.query), args.context),
+                            "excerpt": _excerpt(
+                                line, index, index + len(args.query), args.context
+                            ),
                         }
                     )
                     if len(rows) >= args.limit:
@@ -253,7 +295,10 @@ def command_search_text(args: argparse.Namespace) -> None:
     if args.json:
         _print_payload(rows, as_json=True)
         return
-    _print_payload([f"{row['path']}:{row['line']}: {row['excerpt']}" for row in rows], as_json=False)
+    _print_payload(
+        [f"{row['path']}:{row['line']}: {row['excerpt']}" for row in rows],
+        as_json=False,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -264,7 +309,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--path", required=True, help="Absolute or relative path to inspect")
+    common.add_argument(
+        "--path", required=True, help="Absolute or relative path to inspect"
+    )
     common.add_argument("--include-hidden", action="store_true")
     common.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
     common.add_argument("--json", action="store_true")
@@ -276,16 +323,26 @@ def main(argv: list[str] | None = None) -> int:
     type_filter = argparse.ArgumentParser(add_help=False)
     type_filter.add_argument("--type", choices=["file", "dir", "all"], default="all")
 
-    p_list = sub.add_parser("list", parents=[common, walk, type_filter], help="List entries under a directory")
+    p_list = sub.add_parser(
+        "list",
+        parents=[common, walk, type_filter],
+        help="List entries under a directory",
+    )
     p_list.set_defaults(func=command_list)
 
-    p_find = sub.add_parser("find", parents=[common, walk, type_filter], help="Find paths by name, glob, or extension")
+    p_find = sub.add_parser(
+        "find",
+        parents=[common, walk, type_filter],
+        help="Find paths by name, glob, or extension",
+    )
     p_find.add_argument("--name", action="append")
     p_find.add_argument("--glob", action="append")
     p_find.add_argument("--ext", action="append")
     p_find.set_defaults(func=command_find)
 
-    p_search = sub.add_parser("search-text", parents=[common, walk], help="Search inside text files")
+    p_search = sub.add_parser(
+        "search-text", parents=[common, walk], help="Search inside text files"
+    )
     p_search.add_argument("--query", required=True)
     p_search.add_argument("--glob", action="append")
     p_search.add_argument("--ext", action="append")

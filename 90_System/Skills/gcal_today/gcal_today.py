@@ -23,7 +23,9 @@ OAUTH_CLIENT_SHARED_PATH = SECRETS_DIR / "gcal_oauth_client.json"
 TOKEN_PRIVATE_PATH = SECRETS_DIR / "gcal_token_private.json"
 TOKEN_PERSONAL_PATH = SECRETS_DIR / "gcal_token_personal.json"
 
-MEETING_TEMPLATE_PATH = REPO_ROOT / "20_Meetings" / "Templates" / "MeetingNote_TEMPLATE.md"
+MEETING_TEMPLATE_PATH = (
+    REPO_ROOT / "20_Meetings" / "Templates" / "MeetingNote_TEMPLATE.md"
+)
 MEETING_INDEX_PATH = REPO_ROOT / "20_Meetings" / "_MeetingIndex.md"
 
 
@@ -44,7 +46,9 @@ _configure_stdio()
 @dataclass(frozen=True)
 class CalendarEvent:
     key: str  # Stable per occurrence (instance-aware for recurring events)
-    fireflies_cal_id: str | None  # iCalUID-derived (best-effort) to match Fireflies transcript cal_id
+    fireflies_cal_id: (
+        str | None
+    )  # iCalUID-derived (best-effort) to match Fireflies transcript cal_id
     account: str  # private|personal
     calendar_id: str  # primary
     event_id: str
@@ -174,7 +178,9 @@ def _event_dedupe_key(event: dict) -> str | None:
     # For recurring events, iCalUID is shared by all occurrences, so include original start.
     event_id = event.get("id")
     iCalUID = event.get("iCalUID")
-    original_start = (event.get("originalStartTime") or {}).get("dateTime") or (event.get("originalStartTime") or {}).get("date")
+    original_start = (event.get("originalStartTime") or {}).get("dateTime") or (
+        event.get("originalStartTime") or {}
+    ).get("date")
 
     if iCalUID and original_start:
         return f"{iCalUID}__{original_start}"
@@ -199,12 +205,16 @@ def _fireflies_cal_id(event: dict) -> str | None:
     if not base:
         return None
 
-    dt_str = (event.get("originalStartTime") or {}).get("dateTime") or (event.get("start") or {}).get("dateTime")
+    dt_str = (event.get("originalStartTime") or {}).get("dateTime") or (
+        event.get("start") or {}
+    ).get("dateTime")
     if not dt_str:
         return None
 
     try:
-        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00")).astimezone(timezone.utc)
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00")).astimezone(
+            timezone.utc
+        )
     except Exception:
         return None
 
@@ -212,7 +222,12 @@ def _fireflies_cal_id(event: dict) -> str | None:
     return f"{base}_{stamp}"
 
 
-def fetch_events_in_window(account: str, window_start: datetime, window_end: datetime, calendar_id: str = "primary") -> list[CalendarEvent]:
+def fetch_events_in_window(
+    account: str,
+    window_start: datetime,
+    window_end: datetime,
+    calendar_id: str = "primary",
+) -> list[CalendarEvent]:
     creds = _load_credentials(account)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
     events_result = (
@@ -268,9 +283,13 @@ def fetch_events_in_window(account: str, window_start: datetime, window_end: dat
     return out
 
 
-def fetch_upcoming_events(account: str, calendar_id: str = "primary", days_ahead: int = 14) -> list[CalendarEvent]:
+def fetch_upcoming_events(
+    account: str, calendar_id: str = "primary", days_ahead: int = 14
+) -> list[CalendarEvent]:
     window_start, window_end = _upcoming_window_local(days_ahead=days_ahead)
-    return fetch_events_in_window(account, window_start, window_end, calendar_id=calendar_id)
+    return fetch_events_in_window(
+        account, window_start, window_end, calendar_id=calendar_id
+    )
 
 
 def _sanitize_filename(text: str) -> str:
@@ -304,7 +323,9 @@ def _default_manual_tail() -> str:
     return "## Preparation\n- ...\n\n## Meeting Notes\n- ...\n"
 
 
-def _render_meeting_note(template_text: str, ev: CalendarEvent, preserved_tail: str | None = None) -> str:
+def _render_meeting_note(
+    template_text: str, ev: CalendarEvent, preserved_tail: str | None = None
+) -> str:
     date_str = ev.start_local.date().isoformat()
     start_str = ev.start_local.strftime("%H:%M")
     end_str = ev.end_local.strftime("%H:%M")
@@ -315,12 +336,19 @@ def _render_meeting_note(template_text: str, ev: CalendarEvent, preserved_tail: 
     rendered = rendered.replace("start: HH:MM", f"start: {start_str}")
     rendered = rendered.replace("end: HH:MM", f"end: {end_str}")
 
-    rendered = re.sub(r"^meeting_title:.*$", f"meeting_title: {_yaml_quote(ev.title)}", rendered, flags=re.M)
+    rendered = re.sub(
+        r"^meeting_title:.*$",
+        f"meeting_title: {_yaml_quote(ev.title)}",
+        rendered,
+        flags=re.M,
+    )
     rendered = re.sub(r"^source:.*$", 'source: "google_calendar"', rendered, flags=re.M)
 
     attendees_block = ""
     if ev.attendees:
-        attendees_block = "attendees:\n" + "".join(f"  - {_yaml_quote(a)}\n" for a in ev.attendees)
+        attendees_block = "attendees:\n" + "".join(
+            f"  - {_yaml_quote(a)}\n" for a in ev.attendees
+        )
     else:
         attendees_block = 'attendees:\n  - ""\n'
 
@@ -360,7 +388,9 @@ def _render_meeting_note(template_text: str, ev: CalendarEvent, preserved_tail: 
     auto_lines.append(f"- UID: {ev.key}\n")
     if ev.fireflies_cal_id:
         auto_lines.append(f"- GCal cal_id: {ev.fireflies_cal_id}\n")
-    auto_lines.append(f"- Synced: {datetime.now().astimezone().isoformat(timespec='seconds')}\n")
+    auto_lines.append(
+        f"- Synced: {datetime.now().astimezone().isoformat(timespec='seconds')}\n"
+    )
 
     if preserved_tail is not None:
         out = rendered + "".join(auto_lines) + "\n" + preserved_tail
@@ -386,7 +416,9 @@ def _month_key_for_event(ev: CalendarEvent) -> str:
     return ev.start_local.strftime("%Y-%m")
 
 
-def _dedupe_events(private_events: list[CalendarEvent], personal_events: list[CalendarEvent]) -> list[CalendarEvent]:
+def _dedupe_events(
+    private_events: list[CalendarEvent], personal_events: list[CalendarEvent]
+) -> list[CalendarEvent]:
     chosen: dict[str, CalendarEvent] = {}
     for ev in private_events:
         chosen[ev.key] = ev
@@ -452,9 +484,15 @@ def _sync_window(
 ) -> None:
     template_text = MEETING_TEMPLATE_PATH.read_text(encoding="utf-8")
 
-    private_events = fetch_events_in_window("private", window_start, window_end, "primary")
-    personal_events = fetch_events_in_window("personal", window_start, window_end, "primary")
-    events = [ev for ev in _dedupe_events(private_events, personal_events) if ev.attendees]
+    private_events = fetch_events_in_window(
+        "private", window_start, window_end, "primary"
+    )
+    personal_events = fetch_events_in_window(
+        "personal", window_start, window_end, "primary"
+    )
+    events = [
+        ev for ev in _dedupe_events(private_events, personal_events) if ev.attendees
+    ]
 
     created_paths: list[tuple[Path, str]] = []
     updated_paths: list[tuple[Path, str]] = []
@@ -467,7 +505,9 @@ def _sync_window(
             preserved_tail = _extract_preserved_tail(path.read_text(encoding="utf-8"))
         if not dry_run:
             path.parent.mkdir(parents=True, exist_ok=True)
-            content = _render_meeting_note(template_text, ev, preserved_tail=preserved_tail)
+            content = _render_meeting_note(
+                template_text, ev, preserved_tail=preserved_tail
+            )
             path.write_text(content, encoding="utf-8")
         if existed:
             updated_paths.append((path, wiki_target))
@@ -488,7 +528,9 @@ def _sync_window(
             MEETING_INDEX_PATH.write_text(index_text, encoding="utf-8")
 
     print(f"Window: {window_label}")
-    print(f"Events found: {len(events)} (private: {len(private_events)}, personal: {len(personal_events)})")
+    print(
+        f"Events found: {len(events)} (private: {len(private_events)}, personal: {len(personal_events)})"
+    )
     print(f"Created: {len(created_paths)}")
     for p, _ in created_paths:
         print(f"  + {p.relative_to(REPO_ROOT)}")
@@ -526,9 +568,17 @@ def main(argv: list[str] | None = None) -> int:
     p_auth = sub.add_parser("auth", help="Authenticate and store token for an account")
     p_auth.add_argument("--account", choices=["private", "personal"], required=True)
 
-    p_sync = sub.add_parser("sync", help="Sync upcoming meetings (default: today + 14 days) into meeting notes")
+    p_sync = sub.add_parser(
+        "sync",
+        help="Sync upcoming meetings (default: today + 14 days) into meeting notes",
+    )
     p_sync.add_argument("--dry-run", action="store_true")
-    p_sync.add_argument("--days-back", type=int, default=None, help="Backfill meetings from the last N days up to today")
+    p_sync.add_argument(
+        "--days-back",
+        type=int,
+        default=None,
+        help="Backfill meetings from the last N days up to today",
+    )
 
     args = parser.parse_args(argv)
 

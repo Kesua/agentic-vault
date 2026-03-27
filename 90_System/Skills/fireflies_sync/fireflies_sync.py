@@ -21,7 +21,9 @@ API_KEY_PATH = SECRETS_DIR / "fireflies_api_key.txt"
 
 MEETINGS_DIR = REPO_ROOT / "20_Meetings"
 
-FIREFLIES_GRAPHQL_ENDPOINT = os.environ.get("FIREFLIES_GRAPHQL_ENDPOINT", "https://api.fireflies.ai/graphql").strip()
+FIREFLIES_GRAPHQL_ENDPOINT = os.environ.get(
+    "FIREFLIES_GRAPHQL_ENDPOINT", "https://api.fireflies.ai/graphql"
+).strip()
 
 
 def _configure_stdio() -> None:
@@ -104,7 +106,11 @@ def _load_api_key() -> str:
 
 
 def _to_utc_iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return (
+        dt.astimezone(timezone.utc)
+        .isoformat(timespec="milliseconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def _date_range_to_iso(from_day: date, to_day: date) -> tuple[str, str]:
@@ -113,12 +119,16 @@ def _date_range_to_iso(from_day: date, to_day: date) -> tuple[str, str]:
 
     local_tz = datetime.now().astimezone().tzinfo
     start_local = datetime.combine(from_day, time.min).replace(tzinfo=local_tz)
-    end_local_excl = datetime.combine(to_day + timedelta(days=1), time.min).replace(tzinfo=local_tz)
+    end_local_excl = datetime.combine(to_day + timedelta(days=1), time.min).replace(
+        tzinfo=local_tz
+    )
     return _to_utc_iso(start_local), _to_utc_iso(end_local_excl)
 
 
 def _fireflies_graphql(api_key: str, query: str, variables: dict) -> dict:
-    body = json.dumps({"query": query, "variables": variables}, ensure_ascii=False).encode("utf-8")
+    body = json.dumps(
+        {"query": query, "variables": variables}, ensure_ascii=False
+    ).encode("utf-8")
 
     api_key = api_key.strip()
     auth = api_key if api_key.lower().startswith("bearer ") else f"Bearer {api_key}"
@@ -291,7 +301,9 @@ def _parse_note_gcal_cal_id(text: str) -> str | None:
     return val or None
 
 
-_MEETING_NOTE_RE = re.compile(r"^(?P<hhmm>\d{4})\s+-\s+(?P<title>.+)\.md$", re.IGNORECASE)
+_MEETING_NOTE_RE = re.compile(
+    r"^(?P<hhmm>\d{4})\s+-\s+(?P<title>.+)\.md$", re.IGNORECASE
+)
 
 
 def _iter_meeting_notes(from_day: date, to_day: date) -> list[MeetingNoteMeta]:
@@ -299,12 +311,14 @@ def _iter_meeting_notes(from_day: date, to_day: date) -> list[MeetingNoteMeta]:
         raise ValueError("meeting note range invalid")
 
     local_tz = datetime.now().astimezone().tzinfo
-    #local_tz = datetime(2026, 2, 1, 1, 0, 0).astimezone().tzinfo
+    # local_tz = datetime(2026, 2, 1, 1, 0, 0).astimezone().tzinfo
 
     out: list[MeetingNoteMeta] = []
     cur = from_day
     while cur <= to_day:
-        day_dir = MEETINGS_DIR / cur.strftime("%Y") / cur.strftime("%m") / cur.strftime("%d")
+        day_dir = (
+            MEETINGS_DIR / cur.strftime("%Y") / cur.strftime("%m") / cur.strftime("%d")
+        )
         if day_dir.exists():
             for p in sorted(day_dir.glob("*.md")):
                 m = _MEETING_NOTE_RE.match(p.name)
@@ -314,7 +328,9 @@ def _iter_meeting_notes(from_day: date, to_day: date) -> list[MeetingNoteMeta]:
                 title = m.group("title").strip()
                 hour = int(hhmm[:2])
                 minute = int(hhmm[2:])
-                start_local = datetime.combine(cur, time(hour=hour, minute=minute)).replace(tzinfo=local_tz)
+                start_local = datetime.combine(
+                    cur, time(hour=hour, minute=minute)
+                ).replace(tzinfo=local_tz)
                 text = p.read_text(encoding="utf-8", errors="replace")
                 out.append(
                     MeetingNoteMeta(
@@ -330,7 +346,9 @@ def _iter_meeting_notes(from_day: date, to_day: date) -> list[MeetingNoteMeta]:
     return out
 
 
-def _gcal_cal_id_match_score(note_gcal_cal_id: str, transcript: FirefliesTranscript) -> int:
+def _gcal_cal_id_match_score(
+    note_gcal_cal_id: str, transcript: FirefliesTranscript
+) -> int:
     if not note_gcal_cal_id:
         return 0
     tcal = (transcript.cal_id or "").strip()
@@ -382,7 +400,9 @@ def _parse_transcript_datetime_local(t: FirefliesTranscript) -> datetime | None:
     return None
 
 
-def _choose_same_link_note_by_time(notes: list[MeetingNoteMeta], transcript: FirefliesTranscript) -> MeetingNoteMeta | None:
+def _choose_same_link_note_by_time(
+    notes: list[MeetingNoteMeta], transcript: FirefliesTranscript
+) -> MeetingNoteMeta | None:
     transcript_dt = _parse_transcript_datetime_local(transcript)
     if not transcript_dt:
         return None
@@ -401,32 +421,50 @@ def _choose_same_link_note_by_time(notes: list[MeetingNoteMeta], transcript: Fir
     return scored[0][1]
 
 
-def _choose_meeting_note(notes: list[MeetingNoteMeta], transcript: FirefliesTranscript) -> MeetingNoteMeta | None:
+def _choose_meeting_note(
+    notes: list[MeetingNoteMeta], transcript: FirefliesTranscript
+) -> MeetingNoteMeta | None:
     if not notes:
         return None
 
     t_meet = (transcript.meeting_link or "").strip()
     if t_meet:
         t_norm = _normalize_meeting_url_loose(t_meet)
-        by_meet = [n for n in notes if n.meet_link and _normalize_meeting_url_loose(n.meet_link) == t_norm]
+        by_meet = [
+            n
+            for n in notes
+            if n.meet_link and _normalize_meeting_url_loose(n.meet_link) == t_norm
+        ]
         if len(by_meet) == 1:
             return by_meet[0]
         if len(by_meet) > 1:
             # Same link used for multiple notes (often recurring meetings).
             # Avoid guessing by time; require a strong identifier match to disambiguate.
             if transcript.cal_id:
-                by_meet_cal_scored = [(n, _gcal_cal_id_match_score(n.gcal_cal_id or "", transcript)) for n in by_meet if n.gcal_cal_id]
+                by_meet_cal_scored = [
+                    (n, _gcal_cal_id_match_score(n.gcal_cal_id or "", transcript))
+                    for n in by_meet
+                    if n.gcal_cal_id
+                ]
                 by_meet_cal_scored = [x for x in by_meet_cal_scored if x[1] > 0]
                 if by_meet_cal_scored:
                     by_meet_cal_scored.sort(key=lambda x: x[1], reverse=True)
-                    if len(by_meet_cal_scored) == 1 or by_meet_cal_scored[0][1] > by_meet_cal_scored[1][1]:
+                    if (
+                        len(by_meet_cal_scored) == 1
+                        or by_meet_cal_scored[0][1] > by_meet_cal_scored[1][1]
+                    ):
                         return by_meet_cal_scored[0][0]
 
-            by_meet_uid_scored = [(n, _uid_match_score(n.uid or "", transcript)) for n in by_meet if n.uid]
+            by_meet_uid_scored = [
+                (n, _uid_match_score(n.uid or "", transcript)) for n in by_meet if n.uid
+            ]
             by_meet_uid_scored = [x for x in by_meet_uid_scored if x[1] > 0]
             if by_meet_uid_scored:
                 by_meet_uid_scored.sort(key=lambda x: x[1], reverse=True)
-                if len(by_meet_uid_scored) == 1 or by_meet_uid_scored[0][1] > by_meet_uid_scored[1][1]:
+                if (
+                    len(by_meet_uid_scored) == 1
+                    or by_meet_uid_scored[0][1] > by_meet_uid_scored[1][1]
+                ):
                     return by_meet_uid_scored[0][0]
 
             by_meet_time = _choose_same_link_note_by_time(by_meet, transcript)
@@ -434,14 +472,20 @@ def _choose_meeting_note(notes: list[MeetingNoteMeta], transcript: FirefliesTran
                 return by_meet_time
             return None
 
-    cal_scored = [(n, _gcal_cal_id_match_score(n.gcal_cal_id or "", transcript)) for n in notes if n.gcal_cal_id]
+    cal_scored = [
+        (n, _gcal_cal_id_match_score(n.gcal_cal_id or "", transcript))
+        for n in notes
+        if n.gcal_cal_id
+    ]
     cal_scored = [x for x in cal_scored if x[1] > 0]
     if cal_scored:
         cal_scored.sort(key=lambda x: x[1], reverse=True)
         if len(cal_scored) == 1 or cal_scored[0][1] > cal_scored[1][1]:
             return cal_scored[0][0]
 
-    uid_scored = [(n, _uid_match_score(n.uid or "", transcript)) for n in notes if n.uid]
+    uid_scored = [
+        (n, _uid_match_score(n.uid or "", transcript)) for n in notes if n.uid
+    ]
     uid_scored = [x for x in uid_scored if x[1] > 0]
     if uid_scored:
         uid_scored.sort(key=lambda x: x[1], reverse=True)
@@ -457,7 +501,12 @@ def _transcript_quality_score(t: FirefliesTranscript) -> int:
         score += 5
     if t.summary:
         score += 2
-        for val in (t.summary.short_summary, t.summary.overview, t.summary.bullet_gist, t.summary.action_items):
+        for val in (
+            t.summary.short_summary,
+            t.summary.overview,
+            t.summary.bullet_gist,
+            t.summary.action_items,
+        ):
             if val and str(val).strip():
                 score += 2
         if t.summary.keywords:
@@ -481,7 +530,9 @@ def _preferred_owner_score(t: FirefliesTranscript) -> int:
     return score
 
 
-def _choose_best_transcript_for_note(note: MeetingNoteMeta, transcripts: list[FirefliesTranscript]) -> FirefliesTranscript:
+def _choose_best_transcript_for_note(
+    note: MeetingNoteMeta, transcripts: list[FirefliesTranscript]
+) -> FirefliesTranscript:
     if not transcripts:
         raise ValueError("no transcripts to choose from")
 
@@ -490,15 +541,29 @@ def _choose_best_transcript_for_note(note: MeetingNoteMeta, transcripts: list[Fi
         meet_score = 0
         if note.meet_link and t.meeting_link:
             try:
-                if _normalize_meeting_url_loose(note.meet_link) == _normalize_meeting_url_loose(t.meeting_link):
+                if _normalize_meeting_url_loose(
+                    note.meet_link
+                ) == _normalize_meeting_url_loose(t.meeting_link):
                     meet_score = 10
             except Exception:
                 pass
-        cal_score = _gcal_cal_id_match_score(note.gcal_cal_id or "", t) if note.gcal_cal_id else 0
+        cal_score = (
+            _gcal_cal_id_match_score(note.gcal_cal_id or "", t)
+            if note.gcal_cal_id
+            else 0
+        )
         dt = _parse_transcript_datetime_local(t)
         dist = abs((note.start_local - dt).total_seconds()) if dt else float("inf")
         # Prefer: "my" recording > cal_id match > UID match > meet link match > richer content > closer time > id.
-        return (_preferred_owner_score(t), cal_score, uid_score, meet_score, _transcript_quality_score(t), -dist, t.id)
+        return (
+            _preferred_owner_score(t),
+            cal_score,
+            uid_score,
+            meet_score,
+            _transcript_quality_score(t),
+            -dist,
+            t.id,
+        )
 
     return sorted(transcripts, key=key, reverse=True)[0]
 
@@ -616,9 +681,13 @@ def sync_transcripts_to_notes(from_day: date, to_day: date, dry_run: bool) -> No
             note.path.write_text(out, encoding="utf-8")
         updated.append(note.path)
 
-    print(f"Transcript window (created): {from_day.isoformat()} .. {to_day.isoformat()}")
+    print(
+        f"Transcript window (created): {from_day.isoformat()} .. {to_day.isoformat()}"
+    )
     print(f"Transcripts found: {len(transcripts)}")
-    print(f"Meeting notes scanned: {len(notes)} ({notes_from.isoformat()} .. {notes_to.isoformat()})")
+    print(
+        f"Meeting notes scanned: {len(notes)} ({notes_from.isoformat()} .. {notes_to.isoformat()})"
+    )
     print(f"Updated notes: {len(updated)}")
     for p in updated[:25]:
         print(f"  ~ {p.relative_to(REPO_ROOT)}")
@@ -651,10 +720,21 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="fireflies_sync")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_sync = sub.add_parser("sync", help="Fetch Fireflies transcripts and attach/link them to meeting notes")
-    p_sync.add_argument("--from", dest="from_day", help="YYYY-MM-DD (default: today-30)", default=None)
-    p_sync.add_argument("--to", dest="to_day", help="YYYY-MM-DD (default: today)", default=None)
-    p_sync.add_argument("--days-back", type=int, default=None, help="Sync transcripts created in the last N days")
+    p_sync = sub.add_parser(
+        "sync", help="Fetch Fireflies transcripts and attach/link them to meeting notes"
+    )
+    p_sync.add_argument(
+        "--from", dest="from_day", help="YYYY-MM-DD (default: today-30)", default=None
+    )
+    p_sync.add_argument(
+        "--to", dest="to_day", help="YYYY-MM-DD (default: today)", default=None
+    )
+    p_sync.add_argument(
+        "--days-back",
+        type=int,
+        default=None,
+        help="Sync transcripts created in the last N days",
+    )
     p_sync.add_argument("--dry-run", action="store_true")
 
     args = parser.parse_args(argv)
@@ -668,9 +748,15 @@ def main(argv: list[str] | None = None) -> int:
             from_day = today - timedelta(days=days_back)
             to_day = today
         else:
-            from_day = date.fromisoformat(args.from_day) if args.from_day else (today - timedelta(days=30))
+            from_day = (
+                date.fromisoformat(args.from_day)
+                if args.from_day
+                else (today - timedelta(days=30))
+            )
             to_day = date.fromisoformat(args.to_day) if args.to_day else today
-        sync_transcripts_to_notes(from_day=from_day, to_day=to_day, dry_run=bool(args.dry_run))
+        sync_transcripts_to_notes(
+            from_day=from_day, to_day=to_day, dry_run=bool(args.dry_run)
+        )
         return 0
 
     return 2

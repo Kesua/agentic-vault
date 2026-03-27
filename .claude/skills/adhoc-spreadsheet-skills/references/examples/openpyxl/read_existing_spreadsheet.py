@@ -50,7 +50,9 @@ def main() -> None:
         max_row = ws.max_row or 0
         max_col = ws.max_column or 0
         print(f"\n== {name} (rows: {max_row}, cols: {max_col})")
-        for row in ws.iter_rows(min_row=1, max_row=min(max_row, 5), max_col=min(max_col, 5)):
+        for row in ws.iter_rows(
+            min_row=1, max_row=min(max_row, 5), max_col=min(max_col, 5)
+        ):
             values = [cell.value for cell in row]
             print(values)
 

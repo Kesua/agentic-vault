@@ -116,7 +116,11 @@ def _parse_metadata_block(metadata_block: str) -> dict[str, object]:
     index = start_index
     while index < end_index:
         line = lines[index].rstrip()
-        if not line.strip() or line.lstrip().startswith("#") or line.startswith((" ", "\t")):
+        if (
+            not line.strip()
+            or line.lstrip().startswith("#")
+            or line.startswith((" ", "\t"))
+        ):
             index += 1
             continue
 
@@ -203,7 +207,9 @@ def _is_safe_auto_alias(value: str) -> bool:
 
 
 def _filter_auto_aliases(values: list[str]) -> list[str]:
-    return _dedupe_preserve_order([value for value in values if _is_safe_auto_alias(value)])
+    return _dedupe_preserve_order(
+        [value for value in values if _is_safe_auto_alias(value)]
+    )
 
 
 def _title_from_email(email: str) -> str:
@@ -245,7 +251,9 @@ def _normalize_attendee(raw_value: str, date_value: str) -> AttendeeRecord | Non
 
     aliases.extend(_filter_auto_aliases([name]))
     aliases = _dedupe_preserve_order(aliases)
-    return AttendeeRecord(raw_value=raw, name=name, emails=emails, aliases=aliases, last_touch=date_value)
+    return AttendeeRecord(
+        raw_value=raw, name=name, emails=emails, aliases=aliases, last_touch=date_value
+    )
 
 
 def _strip_wikilink(value: str) -> str:
@@ -319,7 +327,9 @@ def _load_person_notes() -> list[PersonNote]:
     return notes
 
 
-def _build_lookup(notes: list[PersonNote]) -> tuple[dict[str, list[PersonNote]], dict[str, list[PersonNote]]]:
+def _build_lookup(
+    notes: list[PersonNote],
+) -> tuple[dict[str, list[PersonNote]], dict[str, list[PersonNote]]]:
     by_email: dict[str, list[PersonNote]] = {}
     by_alias: dict[str, list[PersonNote]] = {}
     for note in notes:
@@ -335,7 +345,11 @@ def _build_lookup(notes: list[PersonNote]) -> tuple[dict[str, list[PersonNote]],
     return by_email, by_alias
 
 
-def _pick_note(record: AttendeeRecord, by_email: dict[str, list[PersonNote]], by_alias: dict[str, list[PersonNote]]) -> PersonNote | None:
+def _pick_note(
+    record: AttendeeRecord,
+    by_email: dict[str, list[PersonNote]],
+    by_alias: dict[str, list[PersonNote]],
+) -> PersonNote | None:
     for email in record.emails:
         matches = by_email.get(email.casefold(), [])
         if len(matches) == 1:
@@ -364,7 +378,7 @@ def _render_person_frontmatter(metadata: dict[str, object]) -> str:
     emails = _ensure_list(metadata.get("emails"))
     lines = [
         "---",
-        'type: person',
+        "type: person",
         "aliases:",
     ]
     if aliases:
@@ -378,7 +392,7 @@ def _render_person_frontmatter(metadata: dict[str, object]) -> str:
         lines.append('  - ""')
     for key in ("org", "role", "team", "timezone", "last_touch"):
         value = str(metadata.get(key, ""))
-        lines.append(f'{key}: {_yaml_quote(value)}')
+        lines.append(f"{key}: {_yaml_quote(value)}")
     lines.append("---")
     lines.append("")
     return "\n".join(lines)
@@ -388,14 +402,26 @@ def _render_new_person_note(template_text: str, record: AttendeeRecord) -> str:
     primary_email = record.emails[0] if record.emails else ""
     query_token = primary_email or record.name
     rendered = template_text
-    rendered = rendered.replace("aliases: []", "aliases:\n" + "\n".join(f"  - {_yaml_quote(alias)}" for alias in record.aliases))
+    rendered = rendered.replace(
+        "aliases: []",
+        "aliases:\n"
+        + "\n".join(f"  - {_yaml_quote(alias)}" for alias in record.aliases),
+    )
     if record.emails:
-        rendered = rendered.replace("emails: []", "emails:\n" + "\n".join(f"  - {_yaml_quote(email)}" for email in record.emails))
+        rendered = rendered.replace(
+            "emails: []",
+            "emails:\n"
+            + "\n".join(f"  - {_yaml_quote(email)}" for email in record.emails),
+        )
     else:
         rendered = rendered.replace("emails: []", 'emails:\n  - ""')
-    rendered = rendered.replace('last_touch: YYYY-MM-DD', f'last_touch: {_yaml_quote(record.last_touch)}')
+    rendered = rendered.replace(
+        "last_touch: YYYY-MM-DD", f"last_touch: {_yaml_quote(record.last_touch)}"
+    )
     rendered = rendered.replace("# {{title}}", f"# {record.name}")
-    rendered = rendered.replace("- Last touch: YYYY-MM-DD", f"- Last touch: {record.last_touch}")
+    rendered = rendered.replace(
+        "- Last touch: YYYY-MM-DD", f"- Last touch: {record.last_touch}"
+    )
     rendered = rendered.replace("- Email:", f"- Email: {primary_email}")
     rendered = re.sub(r'(?m)^""\s*$', _yaml_quote(query_token), rendered, count=1)
     return rendered
@@ -403,8 +429,14 @@ def _render_new_person_note(template_text: str, record: AttendeeRecord) -> str:
 
 def _update_existing_note(note: PersonNote, record: AttendeeRecord) -> str:
     metadata = dict(note.metadata)
-    aliases = _dedupe_preserve_order(_ensure_list(metadata.get("aliases")) + _filter_auto_aliases([record.name]) + record.aliases)
-    emails = _dedupe_preserve_order(_ensure_list(metadata.get("emails")) + record.emails)
+    aliases = _dedupe_preserve_order(
+        _ensure_list(metadata.get("aliases"))
+        + _filter_auto_aliases([record.name])
+        + record.aliases
+    )
+    emails = _dedupe_preserve_order(
+        _ensure_list(metadata.get("emails")) + record.emails
+    )
     metadata["aliases"] = aliases
     metadata["emails"] = emails
     metadata["type"] = "person"
@@ -416,9 +448,13 @@ def _update_existing_note(note: PersonNote, record: AttendeeRecord) -> str:
         metadata["org"] = ""
     else:
         metadata["org"] = str(metadata.get("org", ""))
-    metadata["last_touch"] = _max_date(str(metadata.get("last_touch", "")), record.last_touch)
+    metadata["last_touch"] = _max_date(
+        str(metadata.get("last_touch", "")), record.last_touch
+    )
     body = note.body.lstrip("\ufeff")
-    body = _refresh_body(body, title=note.title, emails=emails, last_touch=str(metadata["last_touch"]))
+    body = _refresh_body(
+        body, title=note.title, emails=emails, last_touch=str(metadata["last_touch"])
+    )
     return _render_person_frontmatter(metadata) + body
 
 
@@ -432,13 +468,25 @@ def _refresh_body(body: str, *, title: str, emails: list[str], last_touch: str) 
     if not body.strip():
         return body
     body = re.sub(r"(?m)^#\s+.+$", f"# {title}", body, count=1)
-    body = re.sub(r"(?m)^- Last touch:.*$", f"- Last touch: {last_touch}", body, count=1)
+    body = re.sub(
+        r"(?m)^- Last touch:.*$", f"- Last touch: {last_touch}", body, count=1
+    )
     primary_email = emails[0] if emails else ""
     query_terms = _query_terms_block(emails)
     if primary_email:
         body = re.sub(r"(?m)^- Email:.*$", f"- Email: {primary_email}", body, count=1)
-    body = re.sub(r'(?ms)(^## Meetings\s+```query\s+path:20_Meetings\s+).+?(\s+```)', rf'\1{query_terms}\2', body, count=1)
-    body = re.sub(r'(?ms)(^## Emails\s+```query\s+path:00_Mailbox\s+).+?(\s+```)', rf'\1{query_terms}\2', body, count=1)
+    body = re.sub(
+        r"(?ms)(^## Meetings\s+```query\s+path:20_Meetings\s+).+?(\s+```)",
+        rf"\1{query_terms}\2",
+        body,
+        count=1,
+    )
+    body = re.sub(
+        r"(?ms)(^## Emails\s+```query\s+path:00_Mailbox\s+).+?(\s+```)",
+        rf"\1{query_terms}\2",
+        body,
+        count=1,
+    )
     body = _ensure_email_section(body, query_terms)
     return body
 
@@ -463,8 +511,14 @@ def _ensure_email_section(body: str, query_terms: str) -> str:
     return body.rstrip() + "\n\n" + block
 
 
-def _merge_record(records_by_key: dict[str, AttendeeRecord], record: AttendeeRecord) -> None:
-    key = record.emails[0].casefold() if record.emails else _normalize_name_key(record.name)
+def _merge_record(
+    records_by_key: dict[str, AttendeeRecord], record: AttendeeRecord
+) -> None:
+    key = (
+        record.emails[0].casefold()
+        if record.emails
+        else _normalize_name_key(record.name)
+    )
     if not key:
         return
     existing = records_by_key.get(key)
@@ -483,7 +537,12 @@ def refresh_people_layout(*, dry_run: bool) -> int:
         before = note.path.read_text(encoding="utf-8")
         emails = _ensure_list(note.metadata.get("emails"))
         last_touch = str(note.metadata.get("last_touch", ""))
-        refreshed_body = _refresh_body(note.body.lstrip("\ufeff"), title=note.title, emails=emails, last_touch=last_touch)
+        refreshed_body = _refresh_body(
+            note.body.lstrip("\ufeff"),
+            title=note.title,
+            emails=emails,
+            last_touch=last_touch,
+        )
         after = _render_person_frontmatter(note.metadata) + refreshed_body
         if after == before:
             unchanged += 1
@@ -508,7 +567,9 @@ def _update_people_index(attendee_titles: list[str], dry_run: bool) -> bool:
         section_lines.append("- None")
     section = "\n".join(section_lines) + "\n\n"
 
-    pattern = re.compile(r"(?ms)^## (?:Meeting attendees|Contacts from meetings \+ emails) \(auto\)\n.*?(?=^## |\Z)")
+    pattern = re.compile(
+        r"(?ms)^## (?:Meeting attendees|Contacts from meetings \+ emails) \(auto\)\n.*?(?=^## |\Z)"
+    )
     if pattern.search(before):
         after = pattern.sub(section, before, count=1)
     else:
@@ -565,7 +626,10 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
     unchanged = 0
     attendee_titles: list[str] = []
 
-    for record in sorted(attendees_by_key.values(), key=lambda item: (item.name.casefold(), item.raw_value.casefold())):
+    for record in sorted(
+        attendees_by_key.values(),
+        key=lambda item: (item.name.casefold(), item.raw_value.casefold()),
+    ):
         note = _pick_note(record, by_email, by_alias)
         if note is None:
             title = record.name
@@ -576,20 +640,39 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
                 path = PEOPLE_DIR / f"{_sanitize_filename(title)}.md"
                 if not path.exists():
                     break
-                path = PEOPLE_DIR / f"{_sanitize_filename(title + ' ' + record.emails[0])}.md"
+                path = (
+                    PEOPLE_DIR
+                    / f"{_sanitize_filename(title + ' ' + record.emails[0])}.md"
+                )
                 break
             record_for_write = AttendeeRecord(
                 raw_value=record.raw_value,
                 name=title,
                 emails=record.emails,
-                aliases=_dedupe_preserve_order(record.aliases + (_filter_auto_aliases([record.name]) if title != record.name else [])),
+                aliases=_dedupe_preserve_order(
+                    record.aliases
+                    + (
+                        _filter_auto_aliases([record.name])
+                        if title != record.name
+                        else []
+                    )
+                ),
                 last_touch=record.last_touch,
             )
             rendered = _render_new_person_note(template_text, record_for_write)
             if not dry_run:
                 path.write_text(rendered, encoding="utf-8")
             created += 1
-            note = PersonNote(path=path, title=record_for_write.name, metadata={"type": "person", "aliases": record_for_write.aliases, "emails": record_for_write.emails}, body=_split_leading_metadata(rendered)[1])
+            note = PersonNote(
+                path=path,
+                title=record_for_write.name,
+                metadata={
+                    "type": "person",
+                    "aliases": record_for_write.aliases,
+                    "emails": record_for_write.emails,
+                },
+                body=_split_leading_metadata(rendered)[1],
+            )
             person_notes.append(note)
             by_email, by_alias = _build_lookup(person_notes)
         else:
@@ -603,12 +686,16 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
                 note.body = _split_leading_metadata(after)[1]
             else:
                 unchanged += 1
-        attendee_titles.append(_find_title(note.body, note.path.stem) if note.body else note.path.stem)
+        attendee_titles.append(
+            _find_title(note.body, note.path.stem) if note.body else note.path.stem
+        )
 
     attendee_titles = sorted(set(attendee_titles), key=str.casefold)
     index_updated = _update_people_index(attendee_titles, dry_run=dry_run)
 
-    print(f"Contacts found from meetings + mailbox thread participants: {len(attendees_by_key)}")
+    print(
+        f"Contacts found from meetings + mailbox thread participants: {len(attendees_by_key)}"
+    )
     print(f"Created people notes: {created}")
     print(f"Updated people notes: {updated}")
     print(f"Unchanged people notes: {unchanged}")
@@ -620,11 +707,24 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="attendee_people_sync")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_sync = sub.add_parser("sync", help="Create/update people notes from meeting attendees")
-    p_sync.add_argument("--dry-run", action="store_true", help="Show what would change without writing files")
+    p_sync = sub.add_parser(
+        "sync", help="Create/update people notes from meeting attendees"
+    )
+    p_sync.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing files",
+    )
 
-    p_refresh = sub.add_parser("refresh-layout", help="Ensure all person notes contain the expected meetings and emails sections")
-    p_refresh.add_argument("--dry-run", action="store_true", help="Show what would change without writing files")
+    p_refresh = sub.add_parser(
+        "refresh-layout",
+        help="Ensure all person notes contain the expected meetings and emails sections",
+    )
+    p_refresh.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing files",
+    )
 
     args = parser.parse_args()
     if args.cmd == "sync":

@@ -16,8 +16,8 @@ MIN_PYTHON_MAJOR=3
 MIN_PYTHON_MINOR=9
 VENV_DIR=".venv"
 SECRETS_DIR="90_System/secrets"
-WIZARD_SCRIPT="_setup/wizard/server.py"
-WIZARD_MODULE="_setup.wizard.server"
+WIZARD_SCRIPT="src/wizard/server.py"
+WIZARD_MODULE="src.wizard.server"
 PYTHON_CMD=""
 
 # ---------------------------------------------------------------------------
@@ -117,8 +117,13 @@ echo ""
 echo "  [3/5] Installing dependencies (this may take a minute)..."
 
 PIP="$VENV_DIR/bin/pip"
+UV="$VENV_DIR/bin/uv"
 
-"$PIP" install -r requirements.txt --quiet 2>&1 || {
+if [[ ! -x "$UV" ]]; then
+    "$PIP" install uv --quiet 2>&1 || true
+fi
+
+"$UV" sync --quiet 2>&1 || {
     echo ""
     echo "  ERROR: Some packages failed to install."
     echo "  If you see compiler errors, try:  xcode-select --install"
@@ -126,7 +131,7 @@ PIP="$VENV_DIR/bin/pip"
     exit 1
 }
 
-PKG_COUNT=$("$PIP" list --format=columns 2>/dev/null | tail -n +3 | wc -l | tr -d ' ')
+PKG_COUNT=$("$UV" pip list --format=columns 2>/dev/null | tail -n +3 | wc -l | tr -d ' ')
 echo "         Installed ${PKG_COUNT} packages"
 
 # ---------------------------------------------------------------------------

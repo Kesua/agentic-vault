@@ -5,7 +5,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from dataclasses import dataclass
@@ -18,11 +17,15 @@ from urllib import error, parse, request
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_VAULT_ROOT = REPO_ROOT
 DEFAULT_LOG_DIR = REPO_ROOT / "90_System" / "Logs" / "telegram_bridge"
-DEFAULT_RUNTIME_DIR = REPO_ROOT / "90_System" / "Integrations" / "telegram_bridge" / "runtime"
+DEFAULT_RUNTIME_DIR = (
+    REPO_ROOT / "90_System" / "Integrations" / "telegram_bridge" / "runtime"
+)
 DEFAULT_TIMEOUT_SECONDS = 600
 DEFAULT_POLL_TIMEOUT_SECONDS = 30
 TELEGRAM_API_BASE = "https://api.telegram.org"
-UNSUPPORTED_MESSAGE_TEXT = "Tato verze bridge podporuje jen textove zpravy. Posli prosim text."
+UNSUPPORTED_MESSAGE_TEXT = (
+    "Tato verze bridge podporuje jen textove zpravy. Posli prosim text."
+)
 BUSY_TEXT = "Prave bezi jina uloha. Pockej na dokonceni a zkus to znovu."
 
 
@@ -118,7 +121,9 @@ def load_config(config_path: Path | None) -> BridgeConfig:
     log_dir = _resolve_path(env.get("BRIDGE_LOG_DIR"), DEFAULT_LOG_DIR)
     runtime_dir = _resolve_path(env.get("BRIDGE_RUNTIME_DIR"), DEFAULT_RUNTIME_DIR)
     timeout_seconds = int(env.get("BRIDGE_TIMEOUT_SECONDS", DEFAULT_TIMEOUT_SECONDS))
-    poll_timeout_seconds = int(env.get("BRIDGE_POLL_TIMEOUT_SECONDS", DEFAULT_POLL_TIMEOUT_SECONDS))
+    poll_timeout_seconds = int(
+        env.get("BRIDGE_POLL_TIMEOUT_SECONDS", DEFAULT_POLL_TIMEOUT_SECONDS)
+    )
     accept_plain_text = _parse_bool(env.get("BRIDGE_ACCEPT_PLAIN_TEXT"), True)
 
     if timeout_seconds <= 0 or poll_timeout_seconds <= 0:
@@ -223,11 +228,15 @@ def _load_session(config: BridgeConfig, key: SessionKey) -> dict[str, Any]:
     return session
 
 
-def _save_session(config: BridgeConfig, key: SessionKey, session: dict[str, Any]) -> None:
+def _save_session(
+    config: BridgeConfig, key: SessionKey, session: dict[str, Any]
+) -> None:
     session["user_id"] = key.user_id
     session["chat_id"] = key.chat_id
     session["updated_at"] = _now_local().isoformat(timespec="seconds")
-    _session_path(config, key).write_text(json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8")
+    _session_path(config, key).write_text(
+        json.dumps(session, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
 def _reset_session(config: BridgeConfig, key: SessionKey) -> dict[str, Any]:
@@ -236,7 +245,9 @@ def _reset_session(config: BridgeConfig, key: SessionKey) -> dict[str, Any]:
     return session
 
 
-def _append_session_turn(config: BridgeConfig, key: SessionKey, role: str, text: str) -> None:
+def _append_session_turn(
+    config: BridgeConfig, key: SessionKey, role: str, text: str
+) -> None:
     session = _load_session(config, key)
     turns = session.setdefault("turns", [])
     turns.append(
@@ -297,10 +308,14 @@ def _save_last_update_id(config: BridgeConfig, update_id: int) -> None:
 
 
 def _write_last_run(config: BridgeConfig, payload: dict[str, Any]) -> None:
-    _last_run_file(config).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _last_run_file(config).write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
 
-def _telegram_request(config: BridgeConfig, method: str, payload: dict[str, Any]) -> Any:
+def _telegram_request(
+    config: BridgeConfig, method: str, payload: dict[str, Any]
+) -> Any:
     encoded = parse.urlencode(payload).encode("utf-8")
     req = request.Request(
         f"{TELEGRAM_API_BASE}/bot{config.bot_token}/{method}",
@@ -313,7 +328,7 @@ def _telegram_request(config: BridgeConfig, method: str, payload: dict[str, Any]
             body = response.read().decode("utf-8")
     except error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise BridgeError(f"Telegram API HTTP {exc.code}: {detail[:500]}") from exc
+        raise BridgeError(f"Telegram API HTTP {exc.code}: {detail[:500]}") from exc  # type: ignore
     except error.URLError as exc:
         raise BridgeError(f"Telegram API request failed: {exc}") from exc
 
@@ -332,7 +347,7 @@ def send_message(config: BridgeConfig, chat_id: int, text: str) -> None:
         "sendMessage",
         {
             "chat_id": str(chat_id),
-            "text": text[:4000],
+            "text": text[:4000],  # type: ignore
         },
     )
 
@@ -350,14 +365,17 @@ def get_updates(config: BridgeConfig, offset: int | None) -> list[dict[str, Any]
 def _extract_text(message: dict[str, Any]) -> tuple[str | None, str | None]:
     if "text" in message and isinstance(message["text"], str):
         return message["text"], "text"
-    if any(key in message for key in ("voice", "audio", "video_note", "photo", "document", "sticker")):
+    if any(
+        key in message
+        for key in ("voice", "audio", "video_note", "photo", "document", "sticker")
+    ):
         return None, "unsupported"
     return None, "ignored"
 
 
 def _safe_preview(text: str, limit: int = 200) -> str:
     compact = " ".join(text.split())
-    return compact[:limit]
+    return compact[:limit]  # type: ignore
 
 
 def _build_help_text() -> str:
@@ -422,14 +440,16 @@ def _normalize_prompt(raw_text: str, accept_plain_text: bool) -> str | None:
     if text.startswith("/status"):
         return "__STATUS__"
     if text.startswith("/run"):
-        prompt = text[4:].strip()
+        prompt = text[4:].strip()  # type: ignore
         return prompt or None
     if accept_plain_text:
         return text
     return None
 
 
-def _build_codex_prompt(user_text: str, message: dict[str, Any], session: dict[str, Any]) -> str:
+def _build_codex_prompt(
+    user_text: str, message: dict[str, Any], session: dict[str, Any]
+) -> str:
     local_now = _now_local()
     lines = [
         "You are running inside a Telegram bridge for ChiefOfStuffVault.",
@@ -504,7 +524,12 @@ def _acquire_lock(config: BridgeConfig) -> bool:
     except FileExistsError:
         return False
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(json.dumps({"started_at": _now_local().isoformat(timespec="seconds")}, ensure_ascii=False))
+        handle.write(
+            json.dumps(
+                {"started_at": _now_local().isoformat(timespec="seconds")},
+                ensure_ascii=False,
+            )
+        )
     return True
 
 
@@ -514,9 +539,16 @@ def _release_lock(config: BridgeConfig) -> None:
         lock_path.unlink()
 
 
-def run_codex(config: BridgeConfig, user_text: str, message: dict[str, Any], session: dict[str, Any]) -> tuple[str, int, str]:
+def run_codex(
+    config: BridgeConfig,
+    user_text: str,
+    message: dict[str, Any],
+    session: dict[str, Any],
+) -> tuple[str, int, str]:  # type: ignore
     prompt = _build_codex_prompt(user_text, message, session)
-    temp_path = Path(tempfile.mkdtemp(prefix="telegram_bridge_", dir=config.runtime_dir))
+    temp_path = Path(
+        tempfile.mkdtemp(prefix="telegram_bridge_", dir=config.runtime_dir)
+    )
     try:
         output_path = temp_path / "last_message.txt"
         stdout_path = temp_path / "codex_stdout.txt"
@@ -556,10 +588,18 @@ def run_codex(config: BridgeConfig, user_text: str, message: dict[str, Any], ses
         except FileNotFoundError:
             pass
         except PermissionError as exc:
-            _append_log(config, "warning", "Failed to clean Codex temp dir", temp_dir=str(temp_path), error=str(exc))
+            _append_log(
+                config,
+                "warning",
+                "Failed to clean Codex temp dir",
+                temp_dir=str(temp_path),
+                error=str(exc),
+            )
 
 
-def _handle_prompt(config: BridgeConfig, chat_id: int, user_text: str, message: dict[str, Any]) -> None:
+def _handle_prompt(
+    config: BridgeConfig, chat_id: int, user_text: str, message: dict[str, Any]
+) -> None:
     session_key = _session_key_from_message(message)
     if session_key is None:
         send_message(config, chat_id, "Chybi identita session pro tento chat.")
@@ -567,7 +607,9 @@ def _handle_prompt(config: BridgeConfig, chat_id: int, user_text: str, message: 
 
     if not _acquire_lock(config):
         send_message(config, chat_id, BUSY_TEXT)
-        _append_log(config, "warning", "Rejected because bridge is busy", chat_id=chat_id)
+        _append_log(
+            config, "warning", "Rejected because bridge is busy", chat_id=chat_id
+        )
         return
 
     started_at = _now_local().isoformat(timespec="seconds")
@@ -594,14 +636,21 @@ def _handle_prompt(config: BridgeConfig, chat_id: int, user_text: str, message: 
         )
         if exit_code != 0:
             _append_session_turn(config, session_key, "user", user_text)
-            reply_text = f"Codex skoncil s chybou ({summary}).\n\n{reply_text[:3000]}"
+            reply_text = f"Codex skoncil s chybou ({summary}).\n\n{reply_text[:3000]}"  # type: ignore
             if _context_limit_hint(reply_text):
                 reply_text += "\n\nPokud je kontext uz prilis dlouhy, posli /start a zacni novou session."
         else:
             _append_session_turn(config, session_key, "user", user_text)
             _append_session_turn(config, session_key, "assistant", reply_text)
         send_message(config, chat_id, reply_text)
-        _append_log(config, "info", "Codex run finished", chat_id=chat_id, exit_code=exit_code, duration=duration)
+        _append_log(
+            config,
+            "info",
+            "Codex run finished",
+            chat_id=chat_id,
+            exit_code=exit_code,
+            duration=duration,
+        )
     except subprocess.TimeoutExpired:
         summary = f"timeout po {config.timeout_seconds}s"
         _append_session_turn(config, session_key, "user", user_text)
@@ -614,8 +663,16 @@ def _handle_prompt(config: BridgeConfig, chat_id: int, user_text: str, message: 
                 "prompt_preview": _safe_preview(user_text),
             },
         )
-        send_message(config, chat_id, f"Codex prekrocil timeout {config.timeout_seconds}s.")
-        _append_log(config, "error", "Codex run timed out", chat_id=chat_id, timeout_seconds=config.timeout_seconds)
+        send_message(
+            config, chat_id, f"Codex prekrocil timeout {config.timeout_seconds}s."
+        )
+        _append_log(
+            config,
+            "error",
+            "Codex run timed out",
+            chat_id=chat_id,
+            timeout_seconds=config.timeout_seconds,
+        )
     except Exception as exc:
         summary = f"bridge error: {exc}"
         _append_session_turn(config, session_key, "user", user_text)
@@ -632,7 +689,13 @@ def _handle_prompt(config: BridgeConfig, chat_id: int, user_text: str, message: 
         if _context_limit_hint(error_text):
             error_text += "\n\nPokud je kontext uz prilis dlouhy, posli /start a zacni novou session."
         send_message(config, chat_id, error_text)
-        _append_log(config, "error", "Bridge failed while handling prompt", chat_id=chat_id, error=str(exc))
+        _append_log(
+            config,
+            "error",
+            "Bridge failed while handling prompt",
+            chat_id=chat_id,
+            error=str(exc),
+        )
     finally:
         _release_lock(config)
 
@@ -640,7 +703,12 @@ def _handle_prompt(config: BridgeConfig, chat_id: int, user_text: str, message: 
 def _is_allowed(config: BridgeConfig, message: dict[str, Any]) -> bool:
     user_id = message.get("from", {}).get("id")
     chat_id = message.get("chat", {}).get("id")
-    return isinstance(user_id, int) and isinstance(chat_id, int) and user_id in config.allowed_user_ids and chat_id in config.allowed_chat_ids
+    return (
+        isinstance(user_id, int)
+        and isinstance(chat_id, int)
+        and user_id in config.allowed_user_ids
+        and chat_id in config.allowed_chat_ids
+    )
 
 
 def handle_update(config: BridgeConfig, update: dict[str, Any]) -> None:
@@ -668,7 +736,13 @@ def handle_update(config: BridgeConfig, update: dict[str, Any]) -> None:
 
     if kind == "unsupported":
         send_message(config, chat_id, UNSUPPORTED_MESSAGE_TEXT)
-        _append_log(config, "info", "Rejected unsupported message type", user_id=user_id, chat_id=chat_id)
+        _append_log(
+            config,
+            "info",
+            "Rejected unsupported message type",
+            user_id=user_id,
+            chat_id=chat_id,
+        )
         return
     if text is None:
         return
@@ -704,7 +778,7 @@ def run_loop(config: BridgeConfig) -> int:
             for update in updates:
                 update_id = update.get("update_id")
                 if isinstance(update_id, int):
-                    offset = update_id + 1
+                    offset = update_id + 1  # type: ignore
                     _save_last_update_id(config, offset)
                 handle_update(config, update)
         except KeyboardInterrupt:
@@ -713,10 +787,13 @@ def run_loop(config: BridgeConfig) -> int:
         except Exception as exc:
             _append_log(config, "error", "Polling loop error", error=str(exc))
             time.sleep(5)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Telegram -> Codex CLI bridge for ChiefOfStuffVault.")
+    parser = argparse.ArgumentParser(
+        description="Telegram -> Codex CLI bridge for ChiefOfStuffVault."
+    )
     parser.add_argument("--config", help="Path to local env-style config file")
     args = parser.parse_args(argv)
 

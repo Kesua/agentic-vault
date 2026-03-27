@@ -47,7 +47,9 @@ def _is_external_source_edit(path: Path) -> bool:
         return False
     if _is_within(path, EXPORT_ROOT):
         return False
-    return bool(re.search(r"\.(docx|pdf|xlsx|csv|tsv)$", path.name, flags=re.IGNORECASE))
+    return bool(
+        re.search(r"\.(docx|pdf|xlsx|csv|tsv)$", path.name, flags=re.IGNORECASE)
+    )
 
 
 def _blocked_reason(path: Path) -> str | None:

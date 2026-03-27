@@ -13,7 +13,7 @@ FIREFLIES_SKILL_DIR = REPO_ROOT / "90_System" / "Skills" / "fireflies_sync"
 if str(FIREFLIES_SKILL_DIR) not in sys.path:
     sys.path.insert(0, str(FIREFLIES_SKILL_DIR))
 
-import fireflies_sync as ff_base
+import fireflies_sync as ff_base  # type: ignore # noqa: E402
 
 
 def _normalize_transcript(t: ff_base.FirefliesTranscript) -> dict[str, Any]:
@@ -37,9 +37,15 @@ def _normalize_transcript(t: ff_base.FirefliesTranscript) -> dict[str, Any]:
     }
 
 
-def _fetch_window(from_day: str | None, to_day: str | None, default_days: int) -> tuple[date, date, list[ff_base.FirefliesTranscript]]:
+def _fetch_window(
+    from_day: str | None, to_day: str | None, default_days: int
+) -> tuple[date, date, list[ff_base.FirefliesTranscript]]:
     today = datetime.now().astimezone().date()
-    start = date.fromisoformat(from_day) if from_day else (today - timedelta(days=default_days))
+    start = (
+        date.fromisoformat(from_day)
+        if from_day
+        else (today - timedelta(days=default_days))
+    )
     end = date.fromisoformat(to_day) if to_day else today
     transcripts = ff_base.fetch_transcripts(start, end)
     return start, end, transcripts
@@ -70,7 +76,9 @@ def _matches_query(t: ff_base.FirefliesTranscript, query: str) -> bool:
 
 
 def command_search(args: argparse.Namespace) -> None:
-    from_day, to_day, transcripts = _fetch_window(args.from_day, args.to_day, default_days=args.days)
+    from_day, to_day, transcripts = _fetch_window(
+        args.from_day, args.to_day, default_days=args.days
+    )
     filtered = transcripts
     if args.query:
         filtered = [t for t in filtered if _matches_query(t, args.query)]
@@ -79,13 +87,15 @@ def command_search(args: argparse.Namespace) -> None:
     payload = {
         "window": {"from": from_day.isoformat(), "to": to_day.isoformat()},
         "count": len(filtered),
-        "transcripts": [_normalize_transcript(t) for t in filtered[: args.limit]],
+        "transcripts": [_normalize_transcript(t) for t in filtered[: args.limit]],  # type: ignore
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def command_show(args: argparse.Namespace) -> None:
-    from_day, to_day, transcripts = _fetch_window(args.from_day, args.to_day, default_days=args.days)
+    from_day, to_day, transcripts = _fetch_window(
+        args.from_day, args.to_day, default_days=args.days
+    )
     wanted = next((t for t in transcripts if t.id == args.transcript_id), None)
     if not wanted:
         raise RuntimeError(
@@ -105,7 +115,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_search = sub.add_parser("search", help="Search Fireflies transcripts in a date window")
+    p_search = sub.add_parser(
+        "search", help="Search Fireflies transcripts in a date window"
+    )
     p_search.add_argument("--from", dest="from_day")
     p_search.add_argument("--to", dest="to_day")
     p_search.add_argument("--days", type=int, default=30)
@@ -114,7 +126,9 @@ def main(argv: list[str] | None = None) -> int:
     p_search.add_argument("--limit", type=int, default=20)
     p_search.set_defaults(func=command_search)
 
-    p_show = sub.add_parser("show", help="Show one transcript by ID within a date window")
+    p_show = sub.add_parser(
+        "show", help="Show one transcript by ID within a date window"
+    )
     p_show.add_argument("--transcript-id", required=True)
     p_show.add_argument("--from", dest="from_day")
     p_show.add_argument("--to", dest="to_day")

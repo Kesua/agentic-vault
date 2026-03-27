@@ -14,7 +14,9 @@ from openpyxl.utils import get_column_letter
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Create a basic spreadsheet with example data.")
+    parser = argparse.ArgumentParser(
+        description="Create a basic spreadsheet with example data."
+    )
     parser.add_argument(
         "--output",
         type=Path,
