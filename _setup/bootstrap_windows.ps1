@@ -12,8 +12,8 @@ $MIN_PYTHON_MAJOR = 3
 $MIN_PYTHON_MINOR = 9
 $VENV_DIR         = ".venv"
 $SECRETS_DIR      = "90_System\secrets"
-$WIZARD_SCRIPT    = "_setup\wizard\server.py"
-$WIZARD_MODULE    = "_setup.wizard.server"
+$WIZARD_SCRIPT    = "src\wizard\server.py"
+$WIZARD_MODULE    = "src.wizard.server"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -166,7 +166,7 @@ if (-not (Test-Path $UV)) {
     & $PIP install uv --quiet 2>&1 | Out-Null
 }
 
-& $UV pip install -r requirements.txt --quiet 2>&1 | Out-Null
+& $UV sync --quiet 2>&1 | Out-Null
 $ErrorActionPreference = "Stop"
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
