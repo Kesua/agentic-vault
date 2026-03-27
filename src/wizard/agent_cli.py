@@ -30,7 +30,9 @@ ASSISTANTS: dict[str, dict[str, str]] = {
 }
 
 
-def _run(args: list[str], timeout: int = 1800, check: bool = True) -> subprocess.CompletedProcess:
+def _run(
+    args: list[str], timeout: int = 1800, check: bool = True
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         args,
         cwd=REPO_ROOT,
@@ -47,7 +49,9 @@ def _append_to_path(path_value: str | None) -> None:
     current = os.environ.get("PATH", "")
     parts = current.split(os.pathsep) if current else []
     if path_value not in parts:
-        os.environ["PATH"] = path_value + os.pathsep + current if current else path_value
+        os.environ["PATH"] = (
+            path_value + os.pathsep + current if current else path_value
+        )
 
 
 def _npm_prefix() -> str | None:
@@ -174,7 +178,10 @@ def _ensure_node() -> dict[str, str | bool]:
                 timeout=1800,
             )
         except Exception as exc:
-            return {"ok": False, "message": f"Failed to install Node.js via winget: {exc}"}
+            return {
+                "ok": False,
+                "message": f"Failed to install Node.js via winget: {exc}",
+            }
     elif MACOS:
         brew = _resolve_command("brew")
         if not brew:
@@ -185,9 +192,15 @@ def _ensure_node() -> dict[str, str | bool]:
         try:
             _run([brew, "install", "node"], timeout=1800)
         except Exception as exc:
-            return {"ok": False, "message": f"Failed to install Node.js via Homebrew: {exc}"}
+            return {
+                "ok": False,
+                "message": f"Failed to install Node.js via Homebrew: {exc}",
+            }
     else:
-        return {"ok": False, "message": "Automatic assistant installation is only supported on Windows and macOS."}
+        return {
+            "ok": False,
+            "message": "Automatic assistant installation is only supported on Windows and macOS.",
+        }
 
     npm = _resolve_command("npm")
     if not npm:
@@ -201,7 +214,10 @@ def _ensure_node() -> dict[str, str | bool]:
 def install_default() -> dict:
     status = detect()
     if not status["supported"]:
-        return {"ok": False, "message": "Automatic assistant installation is only supported on Windows and macOS."}
+        return {
+            "ok": False,
+            "message": "Automatic assistant installation is only supported on Windows and macOS.",
+        }
     if status["installed_any"]:
         return {
             "ok": True,
@@ -215,7 +231,11 @@ def install_default() -> dict:
 
     npm = _resolve_command("npm")
     if not npm:
-        return {"ok": False, "message": "npm is still unavailable after installing Node.js.", "status": detect()}
+        return {
+            "ok": False,
+            "message": "npm is still unavailable after installing Node.js.",
+            "status": detect(),
+        }
 
     target = ASSISTANTS["codex"]
     try:
@@ -228,10 +248,16 @@ def install_default() -> dict:
             "status": detect(),
         }
     except Exception as exc:
-        return {"ok": False, "message": f"Failed to install {target['label']}: {exc}", "status": detect()}
+        return {
+            "ok": False,
+            "message": f"Failed to install {target['label']}: {exc}",
+            "status": detect(),
+        }
 
     status = detect()
-    installed = next((item for item in status["assistants"] if item["key"] == "codex"), None)
+    installed = next(
+        (item for item in status["assistants"] if item["key"] == "codex"), None
+    )
     if installed and installed["installed"]:
         return {
             "ok": True,
@@ -250,7 +276,9 @@ def launch(key: str) -> dict:
     if key not in ASSISTANTS:
         return {"ok": False, "message": f"Unknown assistant: {key}"}
     status = detect()
-    assistant = next((item for item in status["assistants"] if item["key"] == key), None)
+    assistant = next(
+        (item for item in status["assistants"] if item["key"] == key), None
+    )
     if not assistant or not assistant["installed"]:
         return {"ok": False, "message": f"{ASSISTANTS[key]['label']} is not installed."}
 
@@ -277,8 +305,17 @@ def launch(key: str) -> dict:
             )
             subprocess.Popen(["osascript", "-e", apple_script], cwd=REPO_ROOT)
         else:
-            return {"ok": False, "message": "Launching a coding assistant is only supported on Windows and macOS."}
+            return {
+                "ok": False,
+                "message": "Launching a coding assistant is only supported on Windows and macOS.",
+            }
     except Exception as exc:
-        return {"ok": False, "message": f"Failed to launch {ASSISTANTS[key]['label']}: {exc}"}
+        return {
+            "ok": False,
+            "message": f"Failed to launch {ASSISTANTS[key]['label']}: {exc}",
+        }
 
-    return {"ok": True, "message": f"Started {ASSISTANTS[key]['label']} in the vault folder."}
+    return {
+        "ok": True,
+        "message": f"Started {ASSISTANTS[key]['label']} in the vault folder.",
+    }

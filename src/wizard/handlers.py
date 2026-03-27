@@ -43,13 +43,16 @@ def register_routes(routes: dict) -> None:
 # Status / prerequisites
 # ---------------------------------------------------------------------------
 
+
 def handle_status(_body, _headers) -> dict:
     return state.as_dict()
 
 
 def handle_prerequisites(_body, _headers) -> dict:
-    venv_python = REPO_ROOT / ".venv" / (
-        "Scripts/python.exe" if sys.platform == "win32" else "bin/python"
+    venv_python = (
+        REPO_ROOT
+        / ".venv"
+        / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     )
     return {
         "python_version": f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
@@ -77,6 +80,7 @@ def handle_assistant_launch(body, _headers) -> dict:
 # Google
 # ---------------------------------------------------------------------------
 
+
 def handle_google_upload(body, _headers) -> dict:
     client_json = body.get("client_json", "")
     accounts = body.get("accounts", ["private"])
@@ -86,7 +90,9 @@ def handle_google_upload(body, _headers) -> dict:
         return fmt
 
     result = google_auth_helper.save_oauth_client(
-        client_json.encode("utf-8"), ["gcal", "gmail"], accounts,
+        client_json.encode("utf-8"),
+        ["gcal", "gmail"],
+        accounts,
     )
     current = state.load()
     current.google_credentials_uploaded = True
@@ -124,6 +130,7 @@ def handle_google_auth_status(_body, _headers) -> dict:
 # Todoist
 # ---------------------------------------------------------------------------
 
+
 def handle_todoist_save(body, _headers) -> dict:
     token = body.get("token", "")
     result = validators.live_check_todoist(token)
@@ -144,6 +151,7 @@ def handle_todoist_save(body, _headers) -> dict:
 # ---------------------------------------------------------------------------
 # Telegram
 # ---------------------------------------------------------------------------
+
 
 def handle_telegram_verify(body, _headers) -> dict:
     token = body.get("bot_token", "")
@@ -185,6 +193,7 @@ def handle_telegram_save(body, _headers) -> dict:
 # Fireflies
 # ---------------------------------------------------------------------------
 
+
 def handle_fireflies_save(body, _headers) -> dict:
     key = body.get("key", "")
     result = validators.live_check_fireflies(key)
@@ -202,6 +211,7 @@ def handle_fireflies_save(body, _headers) -> dict:
 # Clockify
 # ---------------------------------------------------------------------------
 
+
 def handle_clockify_save(body, _headers) -> dict:
     key = body.get("key", "")
     result = validators.live_check_clockify(key)
@@ -218,6 +228,7 @@ def handle_clockify_save(body, _headers) -> dict:
 # ---------------------------------------------------------------------------
 # Slack
 # ---------------------------------------------------------------------------
+
 
 def handle_slack_save(body, _headers) -> dict:
     token = body.get("token", "")
@@ -267,12 +278,14 @@ def handle_slack_save_config(body, _headers) -> dict:
 # Health / shutdown
 # ---------------------------------------------------------------------------
 
+
 def handle_health_all(_body, _headers) -> dict:
     return state.as_dict()
 
 
 def handle_shutdown(_body, _headers) -> dict:
     from . import server as srv
+
     ref = srv.get_server_ref()
     if ref:
         threading.Timer(0.5, ref.shutdown).start()

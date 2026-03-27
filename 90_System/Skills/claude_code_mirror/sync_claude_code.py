@@ -318,9 +318,14 @@ def build_claude_md() -> str:
             "- At the start of each session, read `AGENTS.md`, `SOUL.md`, and `MEMORY.md` from the repo root.",
         ]
     )
-    sections.extend(f"- {item}" for item in session_bootstrap if item not in {
-        "In every session, read this `AGENTS.md`, `SOUL.md` as a behavioral guidance and `MEMORY.md` as learned working memory from root."
-    })
+    sections.extend(
+        f"- {item}"
+        for item in session_bootstrap
+        if item
+        not in {
+            "In every session, read this `AGENTS.md`, `SOUL.md` as a behavioral guidance and `MEMORY.md` as learned working memory from root."
+        }
+    )
     sections.extend(
         [
             "",
@@ -456,7 +461,9 @@ def build_skill_markdown(
     slug = slugify(source_name)
     skill_class = infer_skill_class(source_name)
 
-    title, body_without_title = split_title(body, display_name or frontmatter.get("name", source_name))
+    title, body_without_title = split_title(
+        body, display_name or frontmatter.get("name", source_name)
+    )
 
     parts = [
         "---",
@@ -494,7 +501,9 @@ def generate_skills() -> list[dict[str, str]]:
     manifest: list[dict[str, str]] = []
     used_slugs: set[str] = set()
 
-    for source_dir in sorted(path for path in SOURCE_SKILLS_DIR.iterdir() if path.is_dir()):
+    for source_dir in sorted(
+        path for path in SOURCE_SKILLS_DIR.iterdir() if path.is_dir()
+    ):
         skill_md = source_dir / "SKILL.md"
         if not skill_md.exists():
             continue
@@ -521,7 +530,9 @@ def generate_skills() -> list[dict[str, str]]:
                 "source_name": source_name,
                 "claude_name": slug,
                 "source_path": str(skill_md.relative_to(REPO_ROOT).as_posix()),
-                "claude_path": str((destination / "SKILL.md").relative_to(REPO_ROOT).as_posix()),
+                "claude_path": str(
+                    (destination / "SKILL.md").relative_to(REPO_ROOT).as_posix()
+                ),
             }
         )
 
@@ -531,7 +542,9 @@ def generate_skills() -> list[dict[str, str]]:
 def generate_project_files(skill_manifest: Iterable[dict[str, str]]) -> None:
     write_text(REPO_ROOT / "CLAUDE.md", build_claude_md())
     write_text(CLAUDE_DIR / "README.md", CLAUDE_README)
-    write_text(CLAUDE_DIR / "settings.local.example.json", CLAUDE_SETTINGS_LOCAL_EXAMPLE)
+    write_text(
+        CLAUDE_DIR / "settings.local.example.json", CLAUDE_SETTINGS_LOCAL_EXAMPLE
+    )
     write_text(CLAUDE_HOOKS_DIR / "pre_tool_use.py", PRE_TOOL_USE_SCRIPT)
     write_text(
         CLAUDE_DIR / "settings.json",

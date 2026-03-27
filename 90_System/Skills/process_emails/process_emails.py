@@ -41,7 +41,12 @@ def _sanitize_filename(text: str) -> str:
 
 
 def _target_day_path(day_value: datetime) -> Path:
-    return MAILBOX_DIR / day_value.strftime("%Y") / day_value.strftime("%m") / day_value.strftime("%d")
+    return (
+        MAILBOX_DIR
+        / day_value.strftime("%Y")
+        / day_value.strftime("%m")
+        / day_value.strftime("%d")
+    )
 
 
 def _frontmatter(text: str) -> dict[str, object]:
@@ -127,9 +132,13 @@ def _summary_path(day_value: datetime) -> Path:
     return target_dir / "emails_summary.md"
 
 
-def _important_messages_for_account(account: str, *, days_back: int) -> list[tuple[ga.GmailMessage, str]]:
+def _important_messages_for_account(
+    account: str, *, days_back: int
+) -> list[tuple[ga.GmailMessage, str]]:
     service = ga._gmail_service(account)
-    thread_ids = ga._gmail_list_threads(service, f"label:important newer_than:{days_back}d", max_results=500)
+    thread_ids = ga._gmail_list_threads(
+        service, f"label:important newer_than:{days_back}d", max_results=500
+    )
     cutoff = _cutoff_from_days(days_back)
     items: list[tuple[ga.GmailMessage, str]] = []
     for thread_id in thread_ids:
@@ -143,7 +152,9 @@ def _important_messages_for_account(account: str, *, days_back: int) -> list[tup
     return sorted(items, key=lambda item: ga._message_datetime(item[0]), reverse=True)
 
 
-def _render_summary(messages: list[tuple[ga.GmailMessage, str]], *, window_label: str) -> str:
+def _render_summary(
+    messages: list[tuple[ga.GmailMessage, str]], *, window_label: str
+) -> str:
     if not SUMMARY_TEMPLATE_PATH.exists():
         raise RuntimeError(f"Missing template: {SUMMARY_TEMPLATE_PATH}")
     generated_at = datetime.now().astimezone().isoformat(timespec="minutes")
@@ -180,7 +191,9 @@ def command_sync_important(args: argparse.Namespace) -> None:
     days_back = _days_back_value(args.days_back, default_days=1)
     all_messages: list[tuple[ga.GmailMessage, str]] = []
     for account in ("private", "personal"):
-        all_messages.extend(_important_messages_for_account(account, days_back=days_back))
+        all_messages.extend(
+            _important_messages_for_account(account, days_back=days_back)
+        )
     all_messages.sort(key=lambda item: ga._message_datetime(item[0]), reverse=True)
 
     grouped: dict[str, list[tuple[ga.GmailMessage, str]]] = {}
@@ -193,7 +206,10 @@ def command_sync_important(args: argparse.Namespace) -> None:
         if args.dry_run:
             print(f"Would write summary: {path}")
         else:
-            path.write_text(_render_summary([], window_label=f"last {days_back} day(s)"), encoding="utf-8")
+            path.write_text(
+                _render_summary([], window_label=f"last {days_back} day(s)"),
+                encoding="utf-8",
+            )
             print(f"Wrote summary: {path}")
         print("Important messages: 0")
         return
@@ -205,12 +221,19 @@ def command_sync_important(args: argparse.Namespace) -> None:
         if args.dry_run:
             print(f"Would write summary: {path}")
         else:
-            path.write_text(_render_summary(grouped[day_key], window_label=f"last {days_back} day(s)"), encoding="utf-8")
+            path.write_text(
+                _render_summary(
+                    grouped[day_key], window_label=f"last {days_back} day(s)"
+                ),
+                encoding="utf-8",
+            )
             print(f"Wrote summary: {path}")
     print(f"Important messages: {len(all_messages)}")
 
 
-def _thread_has_sent_message(messages: list[ga.GmailMessage], my_email: str, cutoff: datetime) -> bool:
+def _thread_has_sent_message(
+    messages: list[ga.GmailMessage], my_email: str, cutoff: datetime
+) -> bool:
     for message in messages:
         if message.from_email != my_email:
             continue
@@ -237,7 +260,11 @@ def _render_thread(messages: list[ga.GmailMessage], account: str) -> str:
         + [email_addr for msg in messages for email_addr in msg.to_emails]
         + [email_addr for msg in messages for email_addr in msg.cc_emails]
     )
-    emails_block = "\n".join(f"  - {_yaml_quote(item)}" for item in participants) if participants else '  - ""'
+    emails_block = (
+        "\n".join(f"  - {_yaml_quote(item)}" for item in participants)
+        if participants
+        else '  - ""'
+    )
     body_lines: list[str] = []
     for message in messages:
         when = ga._message_datetime(message).isoformat(timespec="minutes")
@@ -273,7 +300,9 @@ def _render_thread(messages: list[ga.GmailMessage], account: str) -> str:
     return rendered
 
 
-def _remove_older_instances(account: str, thread_id: str, keep_path: Path, dry_run: bool) -> int:
+def _remove_older_instances(
+    account: str, thread_id: str, keep_path: Path, dry_run: bool
+) -> int:
     removed = 0
     for path in MAILBOX_DIR.rglob("*.md"):
         if path == keep_path or path.name in {"_Mailbox.md", "emails_summary.md"}:
@@ -292,11 +321,15 @@ def _remove_older_instances(account: str, thread_id: str, keep_path: Path, dry_r
     return removed
 
 
-def _sent_threads_for_account(account: str, *, days_back: int) -> list[tuple[list[ga.GmailMessage], str]]:
+def _sent_threads_for_account(
+    account: str, *, days_back: int
+) -> list[tuple[list[ga.GmailMessage], str]]:
     service = ga._gmail_service(account)
     my_email = ga._get_profile_email(service)
     cutoff = _cutoff_from_days(days_back)
-    thread_ids = ga._gmail_list_threads(service, f"in:anywhere from:me newer_than:{days_back}d", max_results=500)
+    thread_ids = ga._gmail_list_threads(
+        service, f"in:anywhere from:me newer_than:{days_back}d", max_results=500
+    )
     items: list[tuple[list[ga.GmailMessage], str]] = []
     seen: set[str] = set()
     for thread_id in thread_ids:
@@ -318,10 +351,14 @@ def command_sync_sent_threads(args: argparse.Namespace) -> None:
 
     written = 0
     removed = 0
-    for messages, account in sorted(thread_sets, key=lambda item: ga._message_datetime(item[0][-1]), reverse=True):
+    for messages, account in sorted(
+        thread_sets, key=lambda item: ga._message_datetime(item[0][-1]), reverse=True
+    ):
         latest = messages[-1]
         path = _thread_path(account, latest)
-        removed += _remove_older_instances(account, latest.thread_id, path, dry_run=args.dry_run)
+        removed += _remove_older_instances(
+            account, latest.thread_id, path, dry_run=args.dry_run
+        )
         if args.dry_run:
             print(f"Would write thread snapshot: {path}")
         else:
@@ -339,22 +376,46 @@ def command_sync(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Batch-process email summaries and thread snapshots into 00_Mailbox.")
+    parser = argparse.ArgumentParser(
+        description="Batch-process email summaries and thread snapshots into 00_Mailbox."
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_sync = sub.add_parser("sync", help="Run both important-email summary and sent-thread snapshot export")
+    p_sync = sub.add_parser(
+        "sync", help="Run both important-email summary and sent-thread snapshot export"
+    )
     p_sync.add_argument("--dry-run", action="store_true")
-    p_sync.add_argument("--days-back", type=int, default=None, help="Backfill this many days for both exports")
+    p_sync.add_argument(
+        "--days-back",
+        type=int,
+        default=None,
+        help="Backfill this many days for both exports",
+    )
     p_sync.set_defaults(func=command_sync)
 
-    p_imp = sub.add_parser("sync-important", help="Write the last 24h important-email summary")
+    p_imp = sub.add_parser(
+        "sync-important", help="Write the last 24h important-email summary"
+    )
     p_imp.add_argument("--dry-run", action="store_true")
-    p_imp.add_argument("--days-back", type=int, default=None, help="Backfill this many days of important emails")
+    p_imp.add_argument(
+        "--days-back",
+        type=int,
+        default=None,
+        help="Backfill this many days of important emails",
+    )
     p_imp.set_defaults(func=command_sync_important)
 
-    p_threads = sub.add_parser("sync-sent-threads", help="Write latest snapshots for threads you sent in over the last 72h")
+    p_threads = sub.add_parser(
+        "sync-sent-threads",
+        help="Write latest snapshots for threads you sent in over the last 72h",
+    )
     p_threads.add_argument("--dry-run", action="store_true")
-    p_threads.add_argument("--days-back", type=int, default=None, help="Backfill this many days of sent-thread snapshots")
+    p_threads.add_argument(
+        "--days-back",
+        type=int,
+        default=None,
+        help="Backfill this many days of sent-thread snapshots",
+    )
     p_threads.set_defaults(func=command_sync_sent_threads)
 
     return parser

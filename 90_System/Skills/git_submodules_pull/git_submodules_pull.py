@@ -43,12 +43,18 @@ def sync(*, repo_root: Path, mode: str, dry_run: bool) -> None:
         return
 
     # Keep submodule URLs and config consistent with .gitmodules.
-    rc = _run(["git", "submodule", "sync", "--recursive"], cwd=repo_root, dry_run=dry_run)
+    rc = _run(
+        ["git", "submodule", "sync", "--recursive"], cwd=repo_root, dry_run=dry_run
+    )
     if rc != 0:
         raise RuntimeError("git submodule sync failed")
 
     # Ensure the submodule working trees exist.
-    rc = _run(["git", "submodule", "update", "--init", "--recursive"], cwd=repo_root, dry_run=dry_run)
+    rc = _run(
+        ["git", "submodule", "update", "--init", "--recursive"],
+        cwd=repo_root,
+        dry_run=dry_run,
+    )
     if rc != 0:
         raise RuntimeError("git submodule update --init failed")
 
@@ -68,7 +74,9 @@ def sync(*, repo_root: Path, mode: str, dry_run: bool) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Initialize and refresh all git submodules in this repo.")
+    parser = argparse.ArgumentParser(
+        description="Initialize and refresh all git submodules in this repo."
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
     sync_p = sub.add_parser("sync", help="Sync and update all submodules.")
@@ -78,7 +86,9 @@ def _build_parser() -> argparse.ArgumentParser:
         default="remote",
         help="remote: update to latest remote commits; pinned: checkout SHAs recorded in the superproject.",
     )
-    sync_p.add_argument("--dry-run", action="store_true", help="Print commands without executing them.")
+    sync_p.add_argument(
+        "--dry-run", action="store_true", help="Print commands without executing them."
+    )
     sync_p.add_argument(
         "--repo-root",
         type=Path,
@@ -105,4 +115,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

@@ -3,12 +3,13 @@ import importlib.util
 import sys
 from pathlib import Path
 
+
 def test_src_wizard_server_basic():
     # Dynamically import the script to avoid syntax errors with numeric module names
     file_path = Path(r"c:\Users\kodou\git\agentic-vault\src\wizard\server.py")
     if not file_path.exists():
         pytest.skip("File not found")
-        
+
     module_name = "src_wizard_server"
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)

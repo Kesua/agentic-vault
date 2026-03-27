@@ -79,7 +79,9 @@ def auth_account(account: str) -> None:
 
 
 def _service(account: str):
-    return build("calendar", "v3", credentials=_load_credentials(account), cache_discovery=False)
+    return build(
+        "calendar", "v3", credentials=_load_credentials(account), cache_discovery=False
+    )
 
 
 def _normalize_text(value: str) -> str:
@@ -96,8 +98,10 @@ def _serialize_event(account: str, event: dict[str, Any]) -> dict[str, Any]:
         "account": account,
         "event_id": event.get("id"),
         "title": event.get("summary"),
-        "start": (event.get("start") or {}).get("dateTime") or (event.get("start") or {}).get("date"),
-        "end": (event.get("end") or {}).get("dateTime") or (event.get("end") or {}).get("date"),
+        "start": (event.get("start") or {}).get("dateTime")
+        or (event.get("start") or {}).get("date"),
+        "end": (event.get("end") or {}).get("dateTime")
+        or (event.get("end") or {}).get("date"),
         "attendees": attendees,
         "location": event.get("location"),
         "description": event.get("description"),
@@ -139,23 +143,41 @@ def command_list(args: argparse.Namespace) -> None:
                     record.get("location") or "",
                     " ".join(record.get("attendees") or []),
                 ]
-                if not any(args.query.casefold() in str(text).casefold() for text in haystacks if text):
+                if not any(
+                    args.query.casefold() in str(text).casefold()
+                    for text in haystacks
+                    if text
+                ):
                     continue
             events.append(record)
     events.sort(key=lambda item: str(item.get("start") or ""))
-    print(json.dumps({"count": len(events), "events": events[: args.limit]}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {"count": len(events), "events": events[: args.limit]},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
 
 
 def command_show(args: argparse.Namespace) -> None:
     for account in _iter_accounts(args.account):
         service = _service(account)
         try:
-            event = service.events().get(calendarId="primary", eventId=args.event_id).execute()
+            event = (
+                service.events()
+                .get(calendarId="primary", eventId=args.event_id)
+                .execute()
+            )
         except Exception:
             continue
-        print(json.dumps(_serialize_event(account, event), ensure_ascii=False, indent=2))
+        print(
+            json.dumps(_serialize_event(account, event), ensure_ascii=False, indent=2)
+        )
         return
-    raise RuntimeError(f"Event '{args.event_id}' not found for account setting '{args.account}'")
+    raise RuntimeError(
+        f"Event '{args.event_id}' not found for account setting '{args.account}'"
+    )
 
 
 def _draft_filename(title: str) -> str:
@@ -171,7 +193,9 @@ def _quote_yaml(text: str) -> str:
 
 def _draft_text(payload: dict[str, Any]) -> str:
     attendees = payload.get("attendees") or []
-    attendee_lines = "\n".join(f"  - {email}" for email in attendees) if attendees else "  -"
+    attendee_lines = (
+        "\n".join(f"  - {email}" for email in attendees) if attendees else "  -"
+    )
     body_json = json.dumps(payload, ensure_ascii=False, indent=2)
     return (
         "---\n"
@@ -219,7 +243,11 @@ def command_create_draft(args: argparse.Namespace) -> None:
     DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
     path = DRAFTS_DIR / _draft_filename(payload["title"])
     path.write_text(_draft_text(payload), encoding="utf-8")
-    print(json.dumps({"draft": str(path), "payload": payload}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {"draft": str(path), "payload": payload}, ensure_ascii=False, indent=2
+        )
+    )
 
 
 def _load_draft_payload(path: Path) -> dict[str, Any]:
@@ -276,26 +304,37 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_auth = sub.add_parser("auth", help="Authenticate and store an ad-hoc Calendar token")
+    p_auth = sub.add_parser(
+        "auth", help="Authenticate and store an ad-hoc Calendar token"
+    )
     p_auth.add_argument("--account", choices=["private", "personal"], required=True)
     p_auth.set_defaults(func=lambda args: auth_account(args.account))
 
     p_list = sub.add_parser("list", help="List upcoming meetings")
-    p_list.add_argument("--account", choices=["private", "personal", "both"], default="both")
+    p_list.add_argument(
+        "--account", choices=["private", "personal", "both"], default="both"
+    )
     p_list.add_argument("--days", type=int, default=14)
     p_list.add_argument("--limit", type=int, default=20)
     p_list.add_argument("--query")
     p_list.set_defaults(func=command_list)
 
     p_show = sub.add_parser("show", help="Show one event by Google Calendar event ID")
-    p_show.add_argument("--account", choices=["private", "personal", "both"], default="both")
+    p_show.add_argument(
+        "--account", choices=["private", "personal", "both"], default="both"
+    )
     p_show.add_argument("--event-id", required=True)
     p_show.set_defaults(func=command_show)
 
-    p_draft = sub.add_parser("create-meeting-draft", help="Create a local draft note for a new calendar event")
+    p_draft = sub.add_parser(
+        "create-meeting-draft",
+        help="Create a local draft note for a new calendar event",
+    )
     p_draft.add_argument("--account", choices=["private", "personal"], required=True)
     p_draft.add_argument("--title", required=True)
-    p_draft.add_argument("--start", required=True, help="ISO datetime with timezone offset")
+    p_draft.add_argument(
+        "--start", required=True, help="ISO datetime with timezone offset"
+    )
     p_draft.add_argument("--end", help="ISO datetime with timezone offset")
     p_draft.add_argument("--duration-minutes", type=int, default=30)
     p_draft.add_argument("--attendee", action="append")
@@ -303,7 +342,10 @@ def main(argv: list[str] | None = None) -> int:
     p_draft.add_argument("--description")
     p_draft.set_defaults(func=command_create_draft)
 
-    p_confirm = sub.add_parser("confirm-draft-create", help="Create the calendar event from a pending local draft note")
+    p_confirm = sub.add_parser(
+        "confirm-draft-create",
+        help="Create the calendar event from a pending local draft note",
+    )
     p_confirm.add_argument("--draft", required=True)
     p_confirm.set_defaults(func=command_confirm_draft)
 

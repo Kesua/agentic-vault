@@ -3,12 +3,13 @@ import importlib.util
 import sys
 from pathlib import Path
 
+
 def test_src_wizard_validators_basic():
     # Dynamically import the script to avoid syntax errors with numeric module names
     file_path = Path(r"c:\Users\kodou\git\agentic-vault\src\wizard\validators.py")
     if not file_path.exists():
         pytest.skip("File not found")
-        
+
     module_name = "src_wizard_validators"
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     module = importlib.util.module_from_spec(spec)

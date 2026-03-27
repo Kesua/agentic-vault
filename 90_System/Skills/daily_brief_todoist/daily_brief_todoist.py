@@ -49,7 +49,9 @@ def _load_todoist_token() -> str:
     if isinstance(payload, dict):
         token = payload.get("token")
         if not isinstance(token, str) or not token.strip():
-            raise RuntimeError(f"Token file missing non-empty 'token' field: {TODOIST_TOKEN_PATH}")
+            raise RuntimeError(
+                f"Token file missing non-empty 'token' field: {TODOIST_TOKEN_PATH}"
+            )
         return token.strip()
 
     if isinstance(payload, str) and payload.strip():
@@ -65,7 +67,7 @@ def _load_todoist_token() -> str:
 
     raise RuntimeError(
         f"Unsupported token file format in {TODOIST_TOKEN_PATH}. "
-        "Use {\"token\":\"...\"}, a raw JSON string token, plain text token, or [{\"token\":\"...\"}]."
+        'Use {"token":"..."}, a raw JSON string token, plain text token, or [{"token":"..."}].'
     )
 
 
@@ -123,7 +125,11 @@ def _fetch_todoist_collection(token: str, url_base: str) -> list[dict[str, Any]]
                     break
 
         if not isinstance(items, list):
-            preview = json.dumps(data, ensure_ascii=False)[:500] if isinstance(data, (dict, list)) else str(data)[:500]
+            preview = (
+                json.dumps(data, ensure_ascii=False)[:500]
+                if isinstance(data, (dict, list))
+                else str(data)[:500]
+            )
             raise RuntimeError(
                 "Unexpected Todoist API response format: expected a list of tasks "
                 f"or an object containing one. Response preview: {preview}"
@@ -200,7 +206,11 @@ def _sort_key_for_task(task: dict[str, Any]) -> tuple[Any, ...]:
     return (
         *_norm_id(task.get("project_id")),
         *_norm_id(task.get("section_id")),
-        *_norm_int(task.get("child_order") if task.get("child_order") is not None else task.get("order")),
+        *_norm_int(
+            task.get("child_order")
+            if task.get("child_order") is not None
+            else task.get("order")
+        ),
         priority_sort,
         content_sort,
     )
@@ -222,7 +232,9 @@ def _parent_id_str(task: dict[str, Any]) -> str | None:
 
 def _build_task_graph(
     tasks: list[dict[str, Any]],
-) -> tuple[dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+) -> tuple[
+    dict[str, dict[str, Any]], dict[str, list[dict[str, Any]]], list[dict[str, Any]]
+]:
     task_by_id: dict[str, dict[str, Any]] = {}
     synthetic_idx = 0
     synthetic_keys: dict[int, str] = {}
@@ -241,7 +253,11 @@ def _build_task_graph(
     roots: list[dict[str, Any]] = []
     for task in task_by_id.values():
         parent_id = _parent_id_str(task)
-        if parent_id and parent_id in task_by_id and parent_id != _effective_task_id(task):
+        if (
+            parent_id
+            and parent_id in task_by_id
+            and parent_id != _effective_task_id(task)
+        ):
             children_by_parent.setdefault(parent_id, []).append(task)
         else:
             roots.append(task)
@@ -318,7 +334,9 @@ def _group_task_families_by_due_date(
             grouped[due_key].append(root_id)
 
     for due_key in grouped:
-        grouped[due_key].sort(key=lambda root_id: _sort_key_for_task(task_by_id[root_id]))
+        grouped[due_key].sort(
+            key=lambda root_id: _sort_key_for_task(task_by_id[root_id])
+        )
 
     if debug_preview:
         print("Debug due preview (first up to 10 tasks):")
@@ -454,7 +472,11 @@ def _group_roots_by_project_section(
     return out
 
 
-def _family_member_count(root_id: str, children_by_parent: dict[str, list[dict[str, Any]]], task_by_id: dict[str, dict[str, Any]]) -> int:
+def _family_member_count(
+    root_id: str,
+    children_by_parent: dict[str, list[dict[str, Any]]],
+    task_by_id: dict[str, dict[str, Any]],
+) -> int:
     root = task_by_id.get(root_id)
     if not root:
         return 0
@@ -471,7 +493,10 @@ def _render_tasks_section(
     section_names: dict[str, str],
 ) -> str:
     now_str = datetime.now().astimezone().isoformat(timespec="seconds")
-    total_rendered_tasks = sum(_family_member_count(root_id, children_by_parent, task_by_id) for root_id in root_ids)
+    total_rendered_tasks = sum(
+        _family_member_count(root_id, children_by_parent, task_by_id)
+        for root_id in root_ids
+    )
     lines: list[str] = [
         "# Tasks",
         "",
@@ -530,7 +555,9 @@ def _replace_or_append_tasks_section(existing_text: str, tasks_section: str) -> 
     pattern = re.compile(r"(?ms)^# Tasks\s*$.*?(?=^# |\Z)")
     match = pattern.search(existing_text)
     if match:
-        updated = existing_text[: match.start()] + section + existing_text[match.end() :]
+        updated = (
+            existing_text[: match.start()] + section + existing_text[match.end() :]
+        )
     else:
         updated = existing_text
         if updated and not updated.endswith("\n"):
@@ -552,16 +579,20 @@ def _daily_brief_path(day: date) -> Path:
     return DAILY_BRIEFS_ROOT / year / month / filename
 
 
-def sync_daily_briefs(days_ahead: int = 14, dry_run: bool = False, debug_due_preview: bool = False) -> SyncStats:
+def sync_daily_briefs(
+    days_ahead: int = 14, dry_run: bool = False, debug_due_preview: bool = False
+) -> SyncStats:
     token = _load_todoist_token()
     target_days = _target_dates(days_ahead=days_ahead)
     all_tasks = _fetch_active_tasks(token)
     project_names = _fetch_name_map(token, TODOIST_PROJECTS_URL)
     section_names = _fetch_name_map(token, TODOIST_SECTIONS_URL)
-    grouped, due_in_range, task_by_id, children_by_parent = _group_task_families_by_due_date(
-        all_tasks,
-        target_days,
-        debug_preview=debug_due_preview,
+    grouped, due_in_range, task_by_id, children_by_parent = (
+        _group_task_families_by_due_date(
+            all_tasks,
+            target_days,
+            debug_preview=debug_due_preview,
+        )
     )
 
     created = 0
@@ -625,10 +656,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="daily_brief_todoist")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_sync = sub.add_parser("sync", help="Sync Todoist tasks into daily briefs (today + 14 days)")
+    p_sync = sub.add_parser(
+        "sync", help="Sync Todoist tasks into daily briefs (today + 14 days)"
+    )
     p_sync.add_argument("--dry-run", action="store_true")
     p_sync.add_argument("--days-ahead", type=int, default=14)
-    p_sync.add_argument("--debug-due-preview", action="store_true", help="Print due-date parsing preview for first few tasks")
+    p_sync.add_argument(
+        "--debug-due-preview",
+        action="store_true",
+        help="Print due-date parsing preview for first few tasks",
+    )
 
     args = parser.parse_args(argv)
 

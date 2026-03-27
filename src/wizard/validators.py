@@ -12,6 +12,7 @@ import re
 import urllib.error
 import urllib.request
 
+
 def _make_request(
     url: str,
     headers: dict | None = None,
@@ -19,11 +20,13 @@ def _make_request(
     method: str = "GET",
     auth_error_msg: str = "Token rejected.",
     api_name: str = "API",
-    timeout: int = 15
+    timeout: int = 15,
 ) -> tuple[bool, dict, str]:
     """Helper for JSON-based HTTP requests to reduce boilerplate."""
     try:
-        req = urllib.request.Request(url, headers=headers or {}, data=data, method=method)
+        req = urllib.request.Request(
+            url, headers=headers or {}, data=data, method=method
+        )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return True, json.loads(resp.read()), ""
     except urllib.error.HTTPError as exc:
@@ -33,9 +36,11 @@ def _make_request(
     except Exception as exc:
         return False, {}, f"Could not reach {api_name}: {exc}"
 
+
 # ---------------------------------------------------------------------------
 # Todoist
 # ---------------------------------------------------------------------------
+
 
 def format_check_todoist(token: str) -> dict:
     token = token.strip()
@@ -55,15 +60,19 @@ def live_check_todoist(token: str) -> dict:
     if not fmt["valid"]:
         return fmt
     clean_token = fmt.get("token", token.strip())
-    
+
     ok, data, err = _make_request(
         "https://api.todoist.com/api/v1/projects",
         headers={"Authorization": f"Bearer {clean_token}"},
         auth_error_msg="Token rejected by Todoist. Check and try again.",
-        api_name="Todoist API"
+        api_name="Todoist API",
     )
     if ok:
-        return {"valid": True, "message": f"Connected! Found {len(data)} projects.", "token": clean_token}
+        return {
+            "valid": True,
+            "message": f"Connected! Found {len(data)} projects.",
+            "token": clean_token,
+        }
     return {"valid": False, "message": err}
 
 
@@ -93,11 +102,15 @@ def live_check_telegram(token: str) -> dict:
     ok, data, err = _make_request(
         f"https://api.telegram.org/bot{clean_token}/getMe",
         auth_error_msg="Telegram rejected this token.",
-        api_name="Telegram API"
+        api_name="Telegram API",
     )
     if ok and data.get("ok"):
         bot_name = data["result"].get("username", "unknown")
-        return {"valid": True, "message": f"Bot verified: @{bot_name}", "token": clean_token}
+        return {
+            "valid": True,
+            "message": f"Bot verified: @{bot_name}",
+            "token": clean_token,
+        }
     return {"valid": False, "message": err or "Telegram rejected this token."}
 
 
@@ -105,13 +118,19 @@ def detect_telegram_ids(token: str) -> dict:
     """Call getUpdates to find user_id and chat_id from the most recent message."""
     ok, data, err = _make_request(
         f"https://api.telegram.org/bot{token.strip()}/getUpdates?offset=-1&limit=5",
-        api_name="Telegram API"
+        api_name="Telegram API",
     )
     if not ok:
-        return {"found": False, "message": err.replace("API error:", "Error calling getUpdates:")}
+        return {
+            "found": False,
+            "message": err.replace("API error:", "Error calling getUpdates:"),
+        }
     if not data.get("ok") or not data.get("result"):
-        return {"found": False, "message": "No messages found. Send a message to your bot first."}
-    
+        return {
+            "found": False,
+            "message": "No messages found. Send a message to your bot first.",
+        }
+
     for update in reversed(data["result"]):
         msg = update.get("message", {})
         user = msg.get("from", {})
@@ -124,12 +143,16 @@ def detect_telegram_ids(token: str) -> dict:
                 "username": user.get("username", ""),
                 "first_name": user.get("first_name", ""),
             }
-    return {"found": False, "message": "Messages found but no user info. Try sending /start to the bot."}
+    return {
+        "found": False,
+        "message": "Messages found but no user info. Try sending /start to the bot.",
+    }
 
 
 # ---------------------------------------------------------------------------
 # Fireflies
 # ---------------------------------------------------------------------------
+
 
 def format_check_fireflies(key: str) -> dict:
     key = key.strip()
@@ -146,11 +169,14 @@ def live_check_fireflies(key: str) -> dict:
 
     ok, data, err = _make_request(
         "https://api.fireflies.ai/graphql",
-        headers={"Authorization": f"Bearer {clean_key}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {clean_key}",
+            "Content-Type": "application/json",
+        },
         data=json.dumps({"query": "{ user { email } }"}).encode("utf-8"),
         method="POST",
         auth_error_msg="API key rejected by Fireflies.",
-        api_name="Fireflies API"
+        api_name="Fireflies API",
     )
     if ok:
         email = data.get("data", {}).get("user", {}).get("email", "unknown")
@@ -161,6 +187,7 @@ def live_check_fireflies(key: str) -> dict:
 # ---------------------------------------------------------------------------
 # Clockify
 # ---------------------------------------------------------------------------
+
 
 def format_check_clockify(key: str) -> dict:
     key = key.strip()
@@ -179,7 +206,7 @@ def live_check_clockify(key: str) -> dict:
         "https://api.clockify.me/api/v1/user",
         headers={"X-Api-Key": clean_key},
         auth_error_msg="API key rejected by Clockify.",
-        api_name="Clockify API"
+        api_name="Clockify API",
     )
     if ok:
         name = data.get("name", "unknown")
@@ -192,6 +219,7 @@ def live_check_clockify(key: str) -> dict:
 # ---------------------------------------------------------------------------
 # Slack
 # ---------------------------------------------------------------------------
+
 
 def format_check_slack(token: str) -> dict:
     token = token.strip()
@@ -214,7 +242,7 @@ def live_check_slack(token: str) -> dict:
         headers={"Authorization": f"Bearer {clean_token}"},
         data=b"",
         method="POST",
-        api_name="Slack"
+        api_name="Slack",
     )
     if ok and data.get("ok"):
         return {
@@ -225,7 +253,10 @@ def live_check_slack(token: str) -> dict:
             "team": data.get("team"),
             "token": clean_token,
         }
-    return {"valid": False, "message": err or f"Slack error: {data.get('error', 'unknown')}"}
+    return {
+        "valid": False,
+        "message": err or f"Slack error: {data.get('error', 'unknown')}",
+    }
 
 
 def list_slack_conversations(token: str) -> dict:
@@ -233,7 +264,7 @@ def list_slack_conversations(token: str) -> dict:
     ok, data, err = _make_request(
         "https://slack.com/api/conversations.list?types=public_channel,private_channel,im&limit=200",
         headers={"Authorization": f"Bearer {token.strip()}"},
-        api_name="Slack"
+        api_name="Slack",
     )
     if ok and data.get("ok"):
         channels = [
@@ -263,6 +294,7 @@ def _channel_type(ch: dict) -> str:
 # Google (format only -- live checks happen after OAuth)
 # ---------------------------------------------------------------------------
 
+
 def format_check_google_client(client_json_str: str) -> dict:
     """Validate that the uploaded JSON is a valid OAuth client config."""
     try:
@@ -272,7 +304,10 @@ def format_check_google_client(client_json_str: str) -> dict:
 
     installed = data.get("installed", {})
     if not installed.get("client_id"):
-        return {"valid": False, "message": "Missing 'installed.client_id' -- is this a Desktop app credential?"}
+        return {
+            "valid": False,
+            "message": "Missing 'installed.client_id' -- is this a Desktop app credential?",
+        }
     if not installed.get("client_secret"):
         return {"valid": False, "message": "Missing 'installed.client_secret'"}
     if not installed.get("redirect_uris"):

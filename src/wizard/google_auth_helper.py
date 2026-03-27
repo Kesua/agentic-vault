@@ -63,7 +63,10 @@ def run_oauth_flow(service: str, account: str) -> dict:
 
     client_path = _find_client_file(service, account)
     if not client_path:
-        return {"success": False, "error": f"OAuth client file not found for {service}/{account}"}
+        return {
+            "success": False,
+            "error": f"OAuth client file not found for {service}/{account}",
+        }
 
     try:
         from google_auth_oauthlib.flow import InstalledAppFlow

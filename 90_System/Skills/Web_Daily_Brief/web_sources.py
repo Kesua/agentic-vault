@@ -66,7 +66,9 @@ def _today(tz_name: str) -> date:
         return datetime.now().date()
 
 
-def _http_get(url: str, *, timeout_s: int, user_agent: str) -> tuple[int, dict[str, str], bytes]:
+def _http_get(
+    url: str, *, timeout_s: int, user_agent: str
+) -> tuple[int, dict[str, str], bytes]:
     req = urllib.request.Request(url, headers={"User-Agent": user_agent})
     with urllib.request.urlopen(req, timeout=timeout_s) as resp:
         status = getattr(resp, "status", 200)
@@ -83,7 +85,9 @@ def _as_text(body: bytes, headers: dict[str, str]) -> str:
     content_type = headers.get("content-type", "")
     encoding = "utf-8"
     if "charset=" in content_type:
-        encoding = content_type.split("charset=", 1)[1].split(";", 1)[0].strip() or "utf-8"
+        encoding = (
+            content_type.split("charset=", 1)[1].split(";", 1)[0].strip() or "utf-8"
+        )
     try:
         return body.decode(encoding, errors="replace")
     except LookupError:
@@ -108,7 +112,9 @@ def _open_meteo_ecmwf_url(*, latitude: float, longitude: float, tz_name: str) ->
     return "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(params)
 
 
-def _open_meteo_ecmwf_weather(*, tz_name: str, timeout_s: int, user_agent: str) -> dict[str, Any]:
+def _open_meteo_ecmwf_weather(
+    *, tz_name: str, timeout_s: int, user_agent: str
+) -> dict[str, Any]:
     target_date = _today(tz_name).isoformat()
     locations: list[dict[str, Any]] = []
 
@@ -118,14 +124,22 @@ def _open_meteo_ecmwf_weather(*, tz_name: str, timeout_s: int, user_agent: str) 
             longitude=float(location["longitude"]),
             tz_name=tz_name,
         )
-        status, headers, body = _http_get(url, timeout_s=timeout_s, user_agent=user_agent)
+        status, headers, body = _http_get(
+            url, timeout_s=timeout_s, user_agent=user_agent
+        )
         text = _as_text(body, headers)
         data = json.loads(text)
 
         hourly = data.get("hourly", {}) if isinstance(data, dict) else {}
         times = hourly.get("time", []) if isinstance(hourly, dict) else []
-        temperatures = hourly.get("temperature_2m", []) if isinstance(hourly, dict) else []
-        precip_probs = hourly.get("precipitation_probability", []) if isinstance(hourly, dict) else []
+        temperatures = (
+            hourly.get("temperature_2m", []) if isinstance(hourly, dict) else []
+        )
+        precip_probs = (
+            hourly.get("precipitation_probability", [])
+            if isinstance(hourly, dict)
+            else []
+        )
 
         rows: list[dict[str, Any]] = []
         for time_label in ECMWF_WEATHER_TIMES:
@@ -146,8 +160,12 @@ def _open_meteo_ecmwf_weather(*, tz_name: str, timeout_s: int, user_agent: str) 
             rows.append(
                 {
                     "time": time_label,
-                    "temperature_2m": temperatures[idx] if idx < len(temperatures) else None,
-                    "precipitation_probability": precip_probs[idx] if idx < len(precip_probs) else None,
+                    "temperature_2m": temperatures[idx]
+                    if idx < len(temperatures)
+                    else None,
+                    "precipitation_probability": precip_probs[idx]
+                    if idx < len(precip_probs)
+                    else None,
                     "available": True,
                 }
             )
@@ -176,7 +194,9 @@ def _open_meteo_ecmwf_weather(*, tz_name: str, timeout_s: int, user_agent: str) 
     }
 
 
-def _google_news_rss(url: str, *, timeout_s: int, user_agent: str, max_items: int) -> dict[str, Any]:
+def _google_news_rss(
+    url: str, *, timeout_s: int, user_agent: str, max_items: int
+) -> dict[str, Any]:
     status, headers, body = _http_get(url, timeout_s=timeout_s, user_agent=user_agent)
     text = _as_text(body, headers)
 
@@ -263,22 +283,48 @@ def _stooq_market_snapshot(*, timeout_s: int, user_agent: str) -> dict[str, Any]
         history_url = f"https://stooq.com/q/d/l/?s={symbol_encoded}&i=d"
         page_url = f"https://stooq.com/q/?s={symbol_encoded}"
 
-        quote_status, quote_headers, quote_body = _http_get(quote_url, timeout_s=timeout_s, user_agent=user_agent)
+        quote_status, quote_headers, quote_body = _http_get(
+            quote_url, timeout_s=timeout_s, user_agent=user_agent
+        )
         quote_text = _as_text(quote_body, quote_headers)
         quote = _parse_stooq_quote_line(quote_text)
 
-        history_status, history_headers, history_body = _http_get(history_url, timeout_s=timeout_s, user_agent=user_agent)
+        history_status, history_headers, history_body = _http_get(
+            history_url, timeout_s=timeout_s, user_agent=user_agent
+        )
         history_text = _as_text(history_body, history_headers)
         history_rows = _parse_stooq_history_csv(history_text)
         latest_history = history_rows[-1] if history_rows else None
 
         previous_close: float | None = None
-        close_value = quote["close"] if quote["close"] is not None else (float(latest_history["close"]) if latest_history else None)
-        as_of_date_raw = quote["date"] if quote["date"] != "N/D" else (str(latest_history["date"]).replace("-", "") if latest_history else None)
+        close_value = (
+            quote["close"]
+            if quote["close"] is not None
+            else (float(latest_history["close"]) if latest_history else None)
+        )
+        as_of_date_raw = (
+            quote["date"]
+            if quote["date"] != "N/D"
+            else (
+                str(latest_history["date"]).replace("-", "") if latest_history else None
+            )
+        )
         as_of_time_utc = quote["time"] if quote["time"] != "N/D" else None
-        open_value = quote["open"] if quote["open"] is not None else (float(latest_history["open"]) if latest_history else None)
-        high_value = quote["high"] if quote["high"] is not None else (float(latest_history["high"]) if latest_history else None)
-        low_value = quote["low"] if quote["low"] is not None else (float(latest_history["low"]) if latest_history else None)
+        open_value = (
+            quote["open"]
+            if quote["open"] is not None
+            else (float(latest_history["open"]) if latest_history else None)
+        )
+        high_value = (
+            quote["high"]
+            if quote["high"] is not None
+            else (float(latest_history["high"]) if latest_history else None)
+        )
+        low_value = (
+            quote["low"]
+            if quote["low"] is not None
+            else (float(latest_history["low"]) if latest_history else None)
+        )
 
         if len(history_rows) >= 2 and close_value is not None:
             last_row = history_rows[-1]
@@ -290,7 +336,9 @@ def _stooq_market_snapshot(*, timeout_s: int, user_agent: str) -> dict[str, Any]
 
         pct_change = None
         if previous_close not in (None, 0) and close_value is not None:
-            pct_change = round(((float(close_value) / float(previous_close)) - 1.0) * 100.0, 4)
+            pct_change = round(
+                ((float(close_value) / float(previous_close)) - 1.0) * 100.0, 4
+            )
 
         fallback_used = False
         fallback_payload: dict[str, Any] | None = None
@@ -308,14 +356,16 @@ def _stooq_market_snapshot(*, timeout_s: int, user_agent: str) -> dict[str, Any]
                 open_value = open_value if open_value is not None else close_value
                 high_value = high_value if high_value is not None else None
                 low_value = low_value if low_value is not None else None
-                as_of_date_raw = (str(fallback_payload.get("as_of_date") or "") or None)
+                as_of_date_raw = str(fallback_payload.get("as_of_date") or "") or None
                 as_of_time_utc = None
 
         markets.append(
             {
                 "name": market["name"],
                 "symbol": symbol,
-                "provider": fallback_payload.get("provider") if fallback_used and fallback_payload else "Stooq",
+                "provider": fallback_payload.get("provider")
+                if fallback_used and fallback_payload
+                else "Stooq",
                 "quote_url": page_url,
                 "quote_csv_url": quote_url,
                 "history_csv_url": history_url,
@@ -349,7 +399,9 @@ def _stooq_market_snapshot(*, timeout_s: int, user_agent: str) -> dict[str, Any]
     }
 
 
-def _cnbc_market_quote(*, cnbc_symbol: str, timeout_s: int, user_agent: str) -> dict[str, Any]:
+def _cnbc_market_quote(
+    *, cnbc_symbol: str, timeout_s: int, user_agent: str
+) -> dict[str, Any]:
     url = f"https://www.cnbc.com/quotes/{urllib.parse.quote(cnbc_symbol)}"
     status, headers, body = _http_get(url, timeout_s=timeout_s, user_agent=user_agent)
     text = _as_text(body, headers)
@@ -396,7 +448,9 @@ def _cnbc_market_quote(*, cnbc_symbol: str, timeout_s: int, user_agent: str) -> 
     }
 
 
-def _google_trends_dailytrends_yesterday(*, geo: str, d: date, timeout_s: int, user_agent: str, max_items: int) -> dict[str, Any]:
+def _google_trends_dailytrends_yesterday(
+    *, geo: str, d: date, timeout_s: int, user_agent: str, max_items: int
+) -> dict[str, Any]:
     """
     Fetch Google Trends 'dailytrends' for a specific end-date (ed=YYYYMMDD).
 
@@ -417,7 +471,9 @@ def _google_trends_dailytrends_yesterday(*, geo: str, d: date, timeout_s: int, u
 
     for url in urls:
         try:
-            status, headers, body = _http_get(url, timeout_s=timeout_s, user_agent=user_agent)
+            status, headers, body = _http_get(
+                url, timeout_s=timeout_s, user_agent=user_agent
+            )
             text = _as_text(body, headers).lstrip()
             if text.startswith(")]}'"):
                 text = text.split("\n", 1)[1] if "\n" in text else ""
@@ -429,12 +485,18 @@ def _google_trends_dailytrends_yesterday(*, geo: str, d: date, timeout_s: int, u
             continue
 
     days = data.get("default", {}).get("trendingSearchesDays", [])
-    searches = days[0].get("trendingSearches", []) if (days and isinstance(days[0], dict)) else []
+    searches = (
+        days[0].get("trendingSearches", [])
+        if (days and isinstance(days[0], dict))
+        else []
+    )
 
     items: list[dict[str, Any]] = []
     for s in searches[:max_items]:
         title_obj = s.get("title")
-        query = (title_obj.get("query") if isinstance(title_obj, dict) else title_obj) or ""
+        query = (
+            title_obj.get("query") if isinstance(title_obj, dict) else title_obj
+        ) or ""
         traffic = s.get("formattedTraffic")
         articles = s.get("articles", [])
         article_summaries: list[dict[str, str]] = []
@@ -443,11 +505,25 @@ def _google_trends_dailytrends_yesterday(*, geo: str, d: date, timeout_s: int, u
                 if not isinstance(a, dict):
                     continue
                 source_obj = a.get("source")
-                source_name = (source_obj.get("name") if isinstance(source_obj, dict) else source_obj) or ""
+                source_name = (
+                    source_obj.get("name")
+                    if isinstance(source_obj, dict)
+                    else source_obj
+                ) or ""
                 article_summaries.append(
-                    {"title": str(a.get("title") or ""), "url": str(a.get("url") or ""), "source": str(source_name)}
+                    {
+                        "title": str(a.get("title") or ""),
+                        "url": str(a.get("url") or ""),
+                        "source": str(source_name),
+                    }
                 )
-        items.append({"query": str(query).strip(), "traffic": traffic, "articles": article_summaries})
+        items.append(
+            {
+                "query": str(query).strip(),
+                "traffic": traffic,
+                "articles": article_summaries,
+            }
+        )
 
     return {
         "urls_tried": urls,
@@ -467,7 +543,9 @@ def _xml_item_text(item: ET.Element, local_name: str) -> str:
     return ""
 
 
-def _google_trends_daily_rss(*, geo: str, timeout_s: int, user_agent: str, max_items: int) -> dict[str, Any]:
+def _google_trends_daily_rss(
+    *, geo: str, timeout_s: int, user_agent: str, max_items: int
+) -> dict[str, Any]:
     """
     Fetch Google Trends daily trending searches RSS (unofficial but simple and often stable).
     """
@@ -503,7 +581,9 @@ def _google_trends_daily_rss(*, geo: str, timeout_s: int, user_agent: str, max_i
     }
 
 
-def _wikipedia_current_events_wikitext_en(*, d: date, timeout_s: int, user_agent: str) -> dict[str, Any]:
+def _wikipedia_current_events_wikitext_en(
+    *, d: date, timeout_s: int, user_agent: str
+) -> dict[str, Any]:
     # Daily pages exist as: Portal:Current events/YYYY Month D (e.g., 2026 February 25)
     title = f"Portal:Current events/{d:%Y} {d:%B} {d.day}"
     params = {
@@ -517,7 +597,11 @@ def _wikipedia_current_events_wikitext_en(*, d: date, timeout_s: int, user_agent
     status, headers, body = _http_get(url, timeout_s=timeout_s, user_agent=user_agent)
     text = _as_text(body, headers)
     data = json.loads(text) if text else {}
-    wikitext = ((data.get("parse") or {}).get("wikitext") or "") if isinstance(data, dict) else ""
+    wikitext = (
+        ((data.get("parse") or {}).get("wikitext") or "")
+        if isinstance(data, dict)
+        else ""
+    )
     return {
         "url": url,
         "status_code": status,
@@ -528,7 +612,9 @@ def _wikipedia_current_events_wikitext_en(*, d: date, timeout_s: int, user_agent
     }
 
 
-def _wikimedia_featured(lang: str, d: date, *, timeout_s: int, user_agent: str) -> dict[str, Any]:
+def _wikimedia_featured(
+    lang: str, d: date, *, timeout_s: int, user_agent: str
+) -> dict[str, Any]:
     url = f"https://api.wikimedia.org/feed/v1/wikipedia/{lang}/featured/{d:%Y}/{d:%m}/{d:%d}"
     status, headers, body = _http_get(url, timeout_s=timeout_s, user_agent=user_agent)
     text = _as_text(body, headers)
@@ -595,7 +681,13 @@ def _pytrends_top5_yesterday(*, geo: str, tz_name: str) -> dict[str, Any]:
             try:
                 df = daily_trends(**kwargs)
                 values = _df_to_list(df)
-                methods_tried.append({"method": "daily_trends", "kwargs": kwargs, "result_count": len(values)})
+                methods_tried.append(
+                    {
+                        "method": "daily_trends",
+                        "kwargs": kwargs,
+                        "result_count": len(values),
+                    }
+                )
                 if values:
                     return {
                         "date": yday.isoformat(),
@@ -607,19 +699,34 @@ def _pytrends_top5_yesterday(*, geo: str, tz_name: str) -> dict[str, Any]:
                     }
             except Exception as e:
                 methods_tried.append(
-                    {"method": "daily_trends", "kwargs": kwargs, "error": f"{e.__class__.__name__}: {e}"}
+                    {
+                        "method": "daily_trends",
+                        "kwargs": kwargs,
+                        "error": f"{e.__class__.__name__}: {e}",
+                    }
                 )
 
     # Fallback: trending_searches (not guaranteed to be "yesterday", depends on endpoint behavior).
     if hasattr(pytrends, "trending_searches"):
         trending_searches: Callable[..., Any] = getattr(pytrends, "trending_searches")
-        pn_candidates = [geo, geo.lower(), "czech_republic" if geo.upper() == "CZ" else None, "united_states" if geo.upper() == "US" else None]  # type: ignore[list-item]
+        pn_candidates = [
+            geo,
+            geo.lower(),
+            "czech_republic" if geo.upper() == "CZ" else None,
+            "united_states" if geo.upper() == "US" else None,
+        ]  # type: ignore[list-item]
         pn_candidates = [x for x in pn_candidates if x]
         for pn in pn_candidates:
             try:
                 df = trending_searches(pn=pn)
                 values = _df_to_list(df)
-                methods_tried.append({"method": "trending_searches", "kwargs": {"pn": pn}, "result_count": len(values)})
+                methods_tried.append(
+                    {
+                        "method": "trending_searches",
+                        "kwargs": {"pn": pn},
+                        "result_count": len(values),
+                    }
+                )
                 if values:
                     return {
                         "date": yday.isoformat(),
@@ -632,10 +739,17 @@ def _pytrends_top5_yesterday(*, geo: str, tz_name: str) -> dict[str, Any]:
                     }
             except Exception as e:
                 methods_tried.append(
-                    {"method": "trending_searches", "kwargs": {"pn": pn}, "error": f"{e.__class__.__name__}: {e}"}
+                    {
+                        "method": "trending_searches",
+                        "kwargs": {"pn": pn},
+                        "error": f"{e.__class__.__name__}: {e}",
+                    }
                 )
 
-    return {"error": "pytrends did not provide daily trends via available methods", "methods_tried": methods_tried}
+    return {
+        "error": "pytrends did not provide daily trends via available methods",
+        "methods_tried": methods_tried,
+    }
 
 
 def _pytrends_trending_searches_top5(*, pn: str) -> dict[str, Any]:
@@ -723,7 +837,10 @@ def _ecmwf_open_data_sample(*, tz_name: str) -> dict[str, Any]:
                 target=str(out_path),
             )
     except Exception as e:
-        return {"request": request, "error": f"retrieve failed: {e.__class__.__name__}: {e}"}
+        return {
+            "request": request,
+            "error": f"retrieve failed: {e.__class__.__name__}: {e}",
+        }
 
     data = out_path.read_bytes()
     head_b64 = base64.b64encode(data[:256]).decode("ascii")
@@ -739,8 +856,20 @@ def _ecmwf_open_data_sample(*, tz_name: str) -> dict[str, Any]:
     }
 
 
-def _make_source(name: str, *, ok: bool, payload: Any, fetched_at: str, meta: dict[str, Any] | None = None) -> dict[str, Any]:
-    out: dict[str, Any] = {"name": name, "ok": ok, "fetched_at": fetched_at, "payload": payload}
+def _make_source(
+    name: str,
+    *,
+    ok: bool,
+    payload: Any,
+    fetched_at: str,
+    meta: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "name": name,
+        "ok": ok,
+        "fetched_at": fetched_at,
+        "payload": payload,
+    }
     if meta:
         out["meta"] = meta
     return out
@@ -760,11 +889,17 @@ def fetch_all(
 
     sources: list[dict[str, Any]] = []
 
-    def _safe(name: str, fn: Callable[[], Any], *, meta: dict[str, Any] | None = None) -> None:
+    def _safe(
+        name: str, fn: Callable[[], Any], *, meta: dict[str, Any] | None = None
+    ) -> None:
         try:
             payload = fn()
             ok = not (isinstance(payload, dict) and "error" in payload)
-            sources.append(_make_source(name, ok=ok, payload=payload, fetched_at=fetched_at, meta=meta))
+            sources.append(
+                _make_source(
+                    name, ok=ok, payload=payload, fetched_at=fetched_at, meta=meta
+                )
+            )
         except Exception as e:
             sources.append(
                 _make_source(
@@ -780,7 +915,9 @@ def fetch_all(
     _safe("ecmwf_open_data_sample", lambda: _ecmwf_open_data_sample(tz_name=tz_name))
     _safe(
         "open_meteo_ecmwf_weather",
-        lambda: _open_meteo_ecmwf_weather(tz_name=tz_name, timeout_s=timeout_s, user_agent=user_agent),
+        lambda: _open_meteo_ecmwf_weather(
+            tz_name=tz_name, timeout_s=timeout_s, user_agent=user_agent
+        ),
         meta={"date": today.isoformat(), "times_local": list(ECMWF_WEATHER_TIMES)},
     )
 
@@ -814,19 +951,25 @@ def fetch_all(
     # Wikipedia Current Events (Wikimedia Featured Content 'news' list) — CZ + EN.
     _safe(
         "wikipedia_featured_news_cs",
-        lambda: _wikimedia_featured("cs", yesterday, timeout_s=timeout_s, user_agent=user_agent),
+        lambda: _wikimedia_featured(
+            "cs", yesterday, timeout_s=timeout_s, user_agent=user_agent
+        ),
         meta={"date": yesterday.isoformat()},
     )
     _safe(
         "wikipedia_featured_news_en",
-        lambda: _wikimedia_featured("en", yesterday, timeout_s=timeout_s, user_agent=user_agent),
+        lambda: _wikimedia_featured(
+            "en", yesterday, timeout_s=timeout_s, user_agent=user_agent
+        ),
         meta={"date": yesterday.isoformat()},
     )
 
     # Wikipedia Current events daily page (EN) — wikitext for yesterday.
     _safe(
         "wikipedia_current_events_en_wikitext_yesterday",
-        lambda: _wikipedia_current_events_wikitext_en(d=yesterday, timeout_s=timeout_s, user_agent=user_agent),
+        lambda: _wikipedia_current_events_wikitext_en(
+            d=yesterday, timeout_s=timeout_s, user_agent=user_agent
+        ),
         meta={"date": yesterday.isoformat()},
     )
 
@@ -856,14 +999,22 @@ def fetch_all(
     _safe(
         "google_trends_dailytrends_yesterday_cz",
         lambda: _google_trends_dailytrends_yesterday(
-            geo="CZ", d=yesterday, timeout_s=timeout_s, user_agent=user_agent, max_items=5
+            geo="CZ",
+            d=yesterday,
+            timeout_s=timeout_s,
+            user_agent=user_agent,
+            max_items=5,
         ),
         meta={"date": yesterday.isoformat()},
     )
     _safe(
         "google_trends_dailytrends_yesterday_world_proxy_us",
         lambda: _google_trends_dailytrends_yesterday(
-            geo="US", d=yesterday, timeout_s=timeout_s, user_agent=user_agent, max_items=5
+            geo="US",
+            d=yesterday,
+            timeout_s=timeout_s,
+            user_agent=user_agent,
+            max_items=5,
         ),
         meta={"date": yesterday.isoformat()},
     )
@@ -871,12 +1022,16 @@ def fetch_all(
     # Google Trends (RSS) — often more reliable than the JSON endpoint.
     _safe(
         "google_trends_daily_rss_cz",
-        lambda: _google_trends_daily_rss(geo="CZ", timeout_s=timeout_s, user_agent=user_agent, max_items=5),
+        lambda: _google_trends_daily_rss(
+            geo="CZ", timeout_s=timeout_s, user_agent=user_agent, max_items=5
+        ),
         meta={"date": yesterday.isoformat()},
     )
     _safe(
         "google_trends_daily_rss_world_proxy_us",
-        lambda: _google_trends_daily_rss(geo="US", timeout_s=timeout_s, user_agent=user_agent, max_items=5),
+        lambda: _google_trends_daily_rss(
+            geo="US", timeout_s=timeout_s, user_agent=user_agent, max_items=5
+        ),
         meta={"date": yesterday.isoformat()},
     )
 
@@ -909,7 +1064,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="web_sources")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_fetch = sub.add_parser("fetch", help="Fetch deterministic endpoints for Web Daily Brief")
+    p_fetch = sub.add_parser(
+        "fetch", help="Fetch deterministic endpoints for Web Daily Brief"
+    )
     p_fetch.add_argument("--tz", default=DEFAULT_TZ)
     p_fetch.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
     p_fetch.add_argument(
@@ -917,7 +1074,12 @@ def main(argv: list[str] | None = None) -> int:
         default="ChiefOfStuffVault-WebDailyBrief/1.0",
         help="User-Agent for HTTP calls (some endpoints may block default urllib UA).",
     )
-    p_fetch.add_argument("--max-chars", type=int, default=30_000, help="Max chars for any single text field in output.")
+    p_fetch.add_argument(
+        "--max-chars",
+        type=int,
+        default=30_000,
+        help="Max chars for any single text field in output.",
+    )
     p_fetch.add_argument("--rss-max-items", type=int, default=30)
     p_fetch.add_argument("--pretty", action="store_true")
 
@@ -933,10 +1095,19 @@ def main(argv: list[str] | None = None) -> int:
                 rss_max_items=int(args.rss_max_items),
             )
         except urllib.error.URLError as e:
-            print(json.dumps({"ok": False, "error": f"network error: {e}"}, ensure_ascii=False))
+            print(
+                json.dumps(
+                    {"ok": False, "error": f"network error: {e}"}, ensure_ascii=False
+                )
+            )
             return 1
         except Exception as e:
-            print(json.dumps({"ok": False, "error": f"{e.__class__.__name__}: {e}"}, ensure_ascii=False))
+            print(
+                json.dumps(
+                    {"ok": False, "error": f"{e.__class__.__name__}: {e}"},
+                    ensure_ascii=False,
+                )
+            )
             return 1
 
         if args.pretty:

@@ -48,7 +48,13 @@ class ApplyResult:
 
 
 def _daily_brief_path(d: date) -> Path:
-    return REPO_ROOT / "10_DailyBriefs" / f"{d:%Y}" / f"{d:%m}" / f"{d:%Y-%m-%d}_Daily_Brief.md"
+    return (
+        REPO_ROOT
+        / "10_DailyBriefs"
+        / f"{d:%Y}"
+        / f"{d:%m}"
+        / f"{d:%Y-%m-%d}_Daily_Brief.md"
+    )
 
 
 def _today_in_timezone(tz_name: str) -> date:
@@ -67,7 +73,9 @@ def _normalize_daily_news_block(text: str) -> str:
     return text.strip("\n") + "\n\n"
 
 
-def _replace_or_insert_daily_news(existing: str, daily_news_block: str) -> tuple[str, bool]:
+def _replace_or_insert_daily_news(
+    existing: str, daily_news_block: str
+) -> tuple[str, bool]:
     existing_nl = existing.replace("\r\n", "\n")
     lines = existing_nl.splitlines(keepends=True)
 
@@ -77,7 +85,9 @@ def _replace_or_insert_daily_news(existing: str, daily_news_block: str) -> tuple
             start_idx = i
             break
 
-    block_lines = _normalize_daily_news_block(daily_news_block).splitlines(keepends=True)
+    block_lines = _normalize_daily_news_block(daily_news_block).splitlines(
+        keepends=True
+    )
 
     if start_idx is None:
         prefix = "".join(block_lines)
@@ -95,7 +105,9 @@ def _replace_or_insert_daily_news(existing: str, daily_news_block: str) -> tuple
     return "".join(new_lines), True
 
 
-def apply_daily_news(*, day: date, daily_news_markdown: str, dry_run: bool) -> ApplyResult:
+def apply_daily_news(
+    *, day: date, daily_news_markdown: str, dry_run: bool
+) -> ApplyResult:
     path = _daily_brief_path(day)
     existed = path.exists()
     before = path.read_text(encoding="utf-8") if existed else ""
@@ -163,9 +175,13 @@ def _featured_bullet(item: dict[str, Any]) -> str:
     if isinstance(links, list) and links:
         first = links[0]
         if isinstance(first, dict):
-            href = str(first.get("content_urls", {}).get("desktop", {}).get("page") or "").strip()
+            href = str(
+                first.get("content_urls", {}).get("desktop", {}).get("page") or ""
+            ).strip()
             if not href:
-                href = str(first.get("content_urls", {}).get("mobile", {}).get("page") or "").strip()
+                href = str(
+                    first.get("content_urls", {}).get("mobile", {}).get("page") or ""
+                ).strip()
     return f"- {story} ([source]({href}))" if href else f"- {story}"
 
 
@@ -256,7 +272,9 @@ def _render_featured_section(
     lines.append("")
 
 
-def _render_ai_section(lines: list[str], source_map: dict[str, dict[str, Any]], date_label: str) -> None:
+def _render_ai_section(
+    lines: list[str], source_map: dict[str, dict[str, Any]], date_label: str
+) -> None:
     payload_cz = _source_payload(source_map, "google_news_rss_cz")
     payload_world = _source_payload(source_map, "google_news_rss_world_proxy_us")
     items: list[dict[str, Any]] = []
@@ -283,7 +301,9 @@ def _render_ai_section(lines: list[str], source_map: dict[str, dict[str, Any]], 
             if count >= 3:
                 break
     else:
-        lines.append("- No AI-specific deterministic items available in source payload.")
+        lines.append(
+            "- No AI-specific deterministic items available in source payload."
+        )
     lines.append("")
 
 
@@ -314,7 +334,9 @@ def _render_trends_section(
         return
 
     error = str(primary.get("error") or fallback.get("error") or "ok: false")
-    _append_fallback(lines, "Trends data unavailable in deterministic source payload", error)
+    _append_fallback(
+        lines, "Trends data unavailable in deterministic source payload", error
+    )
 
 
 def _render_markets(lines: list[str], source_map: dict[str, dict[str, Any]]) -> None:
@@ -357,12 +379,31 @@ def render_daily_news(data: dict[str, Any]) -> str:
     ]
 
     _render_weather(lines, source_map)
-    _render_news_section(lines, "Anticipated today (CZ)", source_map, "google_news_rss_cz", today)
-    _render_news_section(lines, "Anticipated today (World)", source_map, "google_news_rss_world_proxy_us", today)
-    _render_featured_section(lines, "Yesterday (CZ)", source_map, "wikipedia_featured_news_cs", yesterday)
-    _render_featured_section(lines, "Yesterday (World)", source_map, "wikipedia_featured_news_en", yesterday)
+    _render_news_section(
+        lines, "Anticipated today (CZ)", source_map, "google_news_rss_cz", today
+    )
+    _render_news_section(
+        lines,
+        "Anticipated today (World)",
+        source_map,
+        "google_news_rss_world_proxy_us",
+        today,
+    )
+    _render_featured_section(
+        lines, "Yesterday (CZ)", source_map, "wikipedia_featured_news_cs", yesterday
+    )
+    _render_featured_section(
+        lines, "Yesterday (World)", source_map, "wikipedia_featured_news_en", yesterday
+    )
     _render_ai_section(lines, source_map, yesterday)
-    _render_trends_section(lines, "Trending yesterday (Czechia)", source_map, "google_trends_daily_rss_cz", "pytrends_top5_yesterday_cz", yesterday)
+    _render_trends_section(
+        lines,
+        "Trending yesterday (Czechia)",
+        source_map,
+        "google_trends_daily_rss_cz",
+        "pytrends_top5_yesterday_cz",
+        yesterday,
+    )
     _render_trends_section(
         lines,
         "Trending yesterday (World)",
@@ -384,14 +425,36 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="web_daily_brief")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_render = sub.add_parser("render", help="Render `# Daily News` markdown from fetched JSON.")
-    p_render.add_argument("--sources-file", required=True, help="Path to JSON produced by `web_sources.py fetch`.")
-    p_render.add_argument("--output-file", help="Optional output path for rendered markdown.")
+    p_render = sub.add_parser(
+        "render", help="Render `# Daily News` markdown from fetched JSON."
+    )
+    p_render.add_argument(
+        "--sources-file",
+        required=True,
+        help="Path to JSON produced by `web_sources.py fetch`.",
+    )
+    p_render.add_argument(
+        "--output-file", help="Optional output path for rendered markdown."
+    )
 
-    p_apply = sub.add_parser("apply", help="Insert/replace `# Daily News` in today’s Daily Brief")
-    p_apply.add_argument("--date", dest="date_str", help="Target date (YYYY-MM-DD). Default: today in Europe/Prague.")
-    p_apply.add_argument("--tz", default=DEFAULT_TZ, help=f"Timezone for default date (default: {DEFAULT_TZ}).")
-    p_apply.add_argument("--content-file", required=True, help="Path to a markdown file containing the Daily News block.")
+    p_apply = sub.add_parser(
+        "apply", help="Insert/replace `# Daily News` in today’s Daily Brief"
+    )
+    p_apply.add_argument(
+        "--date",
+        dest="date_str",
+        help="Target date (YYYY-MM-DD). Default: today in Europe/Prague.",
+    )
+    p_apply.add_argument(
+        "--tz",
+        default=DEFAULT_TZ,
+        help=f"Timezone for default date (default: {DEFAULT_TZ}).",
+    )
+    p_apply.add_argument(
+        "--content-file",
+        required=True,
+        help="Path to a markdown file containing the Daily News block.",
+    )
     p_apply.add_argument("--dry-run", action="store_true")
 
     args = parser.parse_args(argv)
@@ -413,7 +476,9 @@ def main(argv: list[str] | None = None) -> int:
             target_day = _today_in_timezone(args.tz)
 
         daily_news = _read_content_file(Path(args.content_file))
-        result = apply_daily_news(day=target_day, daily_news_markdown=daily_news, dry_run=bool(args.dry_run))
+        result = apply_daily_news(
+            day=target_day, daily_news_markdown=daily_news, dry_run=bool(args.dry_run)
+        )
 
         action = "updated" if result.existed else "created"
         if args.dry_run:

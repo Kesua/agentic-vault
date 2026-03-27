@@ -37,7 +37,9 @@ INBOX_PATH = REPO_ROOT / "00_Mailbox" / "_Mailbox.md"
 DAILY_BRIEFS_ROOT = REPO_ROOT / "10_DailyBriefs"
 PEOPLE_DIR = REPO_ROOT / "40_People"
 PEOPLE_INDEX_PATH = PEOPLE_DIR / "_PeopleIndex.md"
-CREATE_LINKS_PATH = REPO_ROOT / "90_System" / "Skills" / "create_links" / "create_links.py"
+CREATE_LINKS_PATH = (
+    REPO_ROOT / "90_System" / "Skills" / "create_links" / "create_links.py"
+)
 
 GMAIL_DAILY_BRIEF_HEADING = "# Gmail"
 PEOPLE_INDEX_AUTO_HEADING = "## Gmail Contacts (auto)"
@@ -206,7 +208,9 @@ def _get_profile_email(service: Any) -> str:
     profile = _safe_execute(service.users().getProfile(userId="me"))
     value = str(profile.get("emailAddress") or "").strip().casefold()
     if not value:
-        raise RuntimeError("Unable to determine authorized Gmail address for the selected account")
+        raise RuntimeError(
+            "Unable to determine authorized Gmail address for the selected account"
+        )
     return value
 
 
@@ -215,7 +219,11 @@ def _gmail_list_threads(service: Any, query: str, max_results: int = 20) -> list
     out: list[str] = []
     while True:
         payload = _safe_execute(
-            service.users().threads().list(userId="me", q=query, maxResults=min(max_results, 100), pageToken=token)
+            service.users()
+            .threads()
+            .list(
+                userId="me", q=query, maxResults=min(max_results, 100), pageToken=token
+            )
         )
         for item in payload.get("threads", []) or []:
             thread_id = str(item.get("id") or "").strip()
@@ -250,7 +258,9 @@ def _decode_body(data: str | None) -> str:
     return decoded.decode("utf-8", errors="replace").strip()
 
 
-def _collect_bodies(part: dict[str, Any], plain_parts: list[str], html_parts: list[str]) -> None:
+def _collect_bodies(
+    part: dict[str, Any], plain_parts: list[str], html_parts: list[str]
+) -> None:
     mime_type = str(part.get("mimeType") or "").strip().lower()
     body = part.get("body") or {}
     data = body.get("data")
@@ -343,8 +353,14 @@ def _normalize_message(raw: dict[str, Any]) -> GmailMessage:
 
 
 def _get_thread_messages(service: Any, thread_id: str) -> list[GmailMessage]:
-    payload = _safe_execute(service.users().threads().get(userId="me", id=thread_id, format="full"))
-    messages = [_normalize_message(item) for item in payload.get("messages", []) or [] if isinstance(item, dict)]
+    payload = _safe_execute(
+        service.users().threads().get(userId="me", id=thread_id, format="full")
+    )
+    messages = [
+        _normalize_message(item)
+        for item in payload.get("messages", []) or []
+        if isinstance(item, dict)
+    ]
     return sorted(messages, key=lambda msg: (msg.internal_ts, msg.id))
 
 
@@ -378,7 +394,8 @@ def _thread_summary(messages: list[GmailMessage]) -> GmailThreadSummary | None:
     latest = messages[-1]
     label_set = {label for message in messages for label in message.label_ids}
     participants = _dedupe_preserve_order(
-        [msg.from_email for msg in messages if msg.from_email] + [email_addr for msg in messages for email_addr in msg.to_emails]
+        [msg.from_email for msg in messages if msg.from_email]
+        + [email_addr for msg in messages for email_addr in msg.to_emails]
     )
     return GmailThreadSummary(
         thread_id=latest.thread_id,
@@ -394,7 +411,9 @@ def _thread_summary(messages: list[GmailMessage]) -> GmailThreadSummary | None:
     )
 
 
-def _search_threads(account: str, query: str, max_results: int) -> list[GmailThreadSummary]:
+def _search_threads(
+    account: str, query: str, max_results: int
+) -> list[GmailThreadSummary]:
     service = _gmail_service(account)
     thread_ids = _gmail_list_threads(service, query, max_results=max_results)
     summaries: list[GmailThreadSummary] = []
@@ -418,7 +437,11 @@ def command_search(args: argparse.Namespace) -> None:
 def _summarize_messages(messages: list[GmailMessage], my_email: str) -> str:
     lines: list[str] = []
     for message in messages:
-        author = "me" if message.from_email == my_email else (message.from_name or message.from_email or "unknown")
+        author = (
+            "me"
+            if message.from_email == my_email
+            else (message.from_name or message.from_email or "unknown")
+        )
         when = _message_datetime(message).isoformat(timespec="minutes")
         snippet = _clip_text(message.body_text or message.snippet, 240)
         lines.append(f"- {when} | {author}: {snippet}")
@@ -427,7 +450,8 @@ def _summarize_messages(messages: list[GmailMessage], my_email: str) -> str:
 
 def _thread_header(subject: str, messages: list[GmailMessage]) -> list[str]:
     participants = _dedupe_preserve_order(
-        [msg.from_email for msg in messages if msg.from_email] + [email_addr for msg in messages for email_addr in msg.to_emails]
+        [msg.from_email for msg in messages if msg.from_email]
+        + [email_addr for msg in messages for email_addr in msg.to_emails]
     )
     started = _message_datetime(messages[0]).isoformat(timespec="minutes")
     last = _message_datetime(messages[-1]).isoformat(timespec="minutes")
@@ -443,37 +467,44 @@ def _thread_header(subject: str, messages: list[GmailMessage]) -> list[str]:
 
 
 def _sanitize_path_component(value: str) -> str:
-    cleaned = re.sub(r'[<>:"/\\|?*]+', '-', value.strip())
-    cleaned = re.sub(r'\s+', ' ', cleaned).strip().rstrip('.')
-    return cleaned or 'attachment'
+    cleaned = re.sub(r'[<>:"/\\|?*]+', "-", value.strip())
+    cleaned = re.sub(r"\s+", " ", cleaned).strip().rstrip(".")
+    return cleaned or "attachment"
 
 
-def _attachment_output_dir(messages: list[GmailMessage], thread_id: str, explicit_dir: str | None) -> Path:
+def _attachment_output_dir(
+    messages: list[GmailMessage], thread_id: str, explicit_dir: str | None
+) -> Path:
     if explicit_dir:
         path = Path(explicit_dir)
         return path if path.is_absolute() else (REPO_ROOT / path)
     thread_day = _message_datetime(messages[-1]).date()
     return (
         REPO_ROOT
-        / '00_Mailbox'
-        / thread_day.strftime('%Y')
-        / thread_day.strftime('%m')
-        / thread_day.strftime('%d')
-        / 'attachments'
+        / "00_Mailbox"
+        / thread_day.strftime("%Y")
+        / thread_day.strftime("%m")
+        / thread_day.strftime("%d")
+        / "attachments"
         / thread_id
     )
 
 
-def _download_attachment(service: Any, message_id: str, attachment: GmailAttachment) -> bytes:
+def _download_attachment(
+    service: Any, message_id: str, attachment: GmailAttachment
+) -> bytes:
     payload = _safe_execute(
-        service.users().messages().attachments().get(
-            userId='me',
+        service.users()
+        .messages()
+        .attachments()
+        .get(
+            userId="me",
             messageId=message_id,
             id=attachment.attachment_id,
         )
     )
-    data = str(payload.get('data') or '')
-    return base64.urlsafe_b64decode(data + '=' * (-len(data) % 4))
+    data = str(payload.get("data") or "")
+    return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
 
 
 def _replace_or_append_section(text: str, heading: str, lines: list[str]) -> str:
@@ -512,7 +543,12 @@ def _merge_bullets(existing_lines: list[str], new_lines: list[str]) -> list[str]
 
 
 def _ensure_daily_brief_path(for_day: date) -> Path:
-    path = DAILY_BRIEFS_ROOT / for_day.strftime("%Y") / for_day.strftime("%m") / f"{for_day.isoformat()}_Daily_Brief.md"
+    path = (
+        DAILY_BRIEFS_ROOT
+        / for_day.strftime("%Y")
+        / for_day.strftime("%m")
+        / f"{for_day.isoformat()}_Daily_Brief.md"
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -621,27 +657,42 @@ def _best_contact_name(raw_name: str, email_addr: str) -> str:
     return " ".join(token[:1].upper() + token[1:] for token in tokens)
 
 
-def _extract_contacts_from_messages(messages: list[GmailMessage], my_email: str) -> list[ContactCandidate]:
+def _extract_contacts_from_messages(
+    messages: list[GmailMessage], my_email: str
+) -> list[ContactCandidate]:
     by_email: dict[str, dict[str, str]] = {}
     for message in messages:
         message_day = _message_datetime(message).date().isoformat()
         if message.from_email and message.from_email != my_email:
             name = _best_contact_name(message.from_name, message.from_email)
-            entry = by_email.setdefault(message.from_email, {"name": name, "last_touch": message_day})
+            entry = by_email.setdefault(
+                message.from_email, {"name": name, "last_touch": message_day}
+            )
             if len(name) > len(entry["name"]):
                 entry["name"] = name
             entry["last_touch"] = max(entry["last_touch"], message_day)
         for email_addr in [*message.to_emails, *message.cc_emails]:
             if email_addr and email_addr != my_email:
                 name = _best_contact_name("", email_addr)
-                entry = by_email.setdefault(email_addr, {"name": name, "last_touch": message_day})
+                entry = by_email.setdefault(
+                    email_addr, {"name": name, "last_touch": message_day}
+                )
                 entry["last_touch"] = max(entry["last_touch"], message_day)
 
     out: list[ContactCandidate] = []
     for email_addr, payload in sorted(by_email.items()):
         name = payload["name"].strip()
-        aliases = _dedupe_preserve_order([name, email_addr, *_slug_aliases_from_email(email_addr)])
-        out.append(ContactCandidate(name=name, emails=(email_addr,), aliases=tuple(aliases), last_touch=payload["last_touch"]))
+        aliases = _dedupe_preserve_order(
+            [name, email_addr, *_slug_aliases_from_email(email_addr)]
+        )
+        out.append(
+            ContactCandidate(
+                name=name,
+                emails=(email_addr,),
+                aliases=tuple(aliases),
+                last_touch=payload["last_touch"],
+            )
+        )
     return out
 
 
@@ -663,7 +714,9 @@ def _load_people_lookup() -> tuple[dict[str, Path], dict[str, Path]]:
     return by_email, by_alias
 
 
-def _find_person_note(contact: ContactCandidate, by_email: dict[str, Path], by_alias: dict[str, Path]) -> Path | None:
+def _find_person_note(
+    contact: ContactCandidate, by_email: dict[str, Path], by_alias: dict[str, Path]
+) -> Path | None:
     for email_addr in contact.emails:
         if email_addr.casefold() in by_email:
             return by_email[email_addr.casefold()]
@@ -717,7 +770,9 @@ def _render_person_note(metadata: dict[str, object], body: str, title: str) -> s
     )
 
 
-def _update_people_index(contacts: list[ContactCandidate], dry_run: bool = False) -> None:
+def _update_people_index(
+    contacts: list[ContactCandidate], dry_run: bool = False
+) -> None:
     if not PEOPLE_INDEX_PATH.exists():
         return
     existing = PEOPLE_INDEX_PATH.read_text(encoding="utf-8")
@@ -728,7 +783,9 @@ def _update_people_index(contacts: list[ContactCandidate], dry_run: bool = False
             continue
         note_path = _find_person_note(contact, by_email, by_alias)
         label = note_path.stem if note_path else _sanitize_filename(contact.name)
-        lines.append(f"- [[{label}]] ({contact.emails[0]}, last touch: {contact.last_touch})")
+        lines.append(
+            f"- [[{label}]] ({contact.emails[0]}, last touch: {contact.last_touch})"
+        )
     updated = _replace_or_append_section(existing, PEOPLE_INDEX_AUTO_HEADING, lines)
     if dry_run:
         print(f"Would update People Index: {PEOPLE_INDEX_PATH}")
@@ -740,7 +797,9 @@ def _update_people_index(contacts: list[ContactCandidate], dry_run: bool = False
 def _run_create_links() -> None:
     if not CREATE_LINKS_PATH.exists():
         return
-    subprocess.run([sys.executable, str(CREATE_LINKS_PATH), "sync"], cwd=str(REPO_ROOT), check=True)
+    subprocess.run(
+        [sys.executable, str(CREATE_LINKS_PATH), "sync"], cwd=str(REPO_ROOT), check=True
+    )
 
 
 def _sync_contacts(contacts: list[ContactCandidate], dry_run: bool = False) -> None:
@@ -759,11 +818,17 @@ def _sync_contacts(contacts: list[ContactCandidate], dry_run: bool = False) -> N
             metadata = _parse_frontmatter(text)
             body = text
 
-        aliases = _dedupe_preserve_order([*_ensure_list(metadata.get("aliases")), *contact.aliases, contact.name])
-        emails = _dedupe_preserve_order([*_ensure_list(metadata.get("emails")), *contact.emails])
+        aliases = _dedupe_preserve_order(
+            [*_ensure_list(metadata.get("aliases")), *contact.aliases, contact.name]
+        )
+        emails = _dedupe_preserve_order(
+            [*_ensure_list(metadata.get("emails")), *contact.emails]
+        )
         metadata["aliases"] = aliases
         metadata["emails"] = emails
-        metadata["last_touch"] = max(str(metadata.get("last_touch", "") or ""), contact.last_touch)
+        metadata["last_touch"] = max(
+            str(metadata.get("last_touch", "") or ""), contact.last_touch
+        )
         rendered = _render_person_note(metadata, body, title=contact.name)
 
         if dry_run:
@@ -799,7 +864,9 @@ def command_summarize_thread(args: argparse.Namespace) -> None:
 
     if args.to_inbox:
         _append_to_inbox(
-            [f"`{datetime.now().astimezone().strftime('%Y-%m-%d %H:%M')}` - Gmail thread summary: {messages[-1].subject} ({args.thread_id})"]
+            [
+                f"`{datetime.now().astimezone().strftime('%Y-%m-%d %H:%M')}` - Gmail thread summary: {messages[-1].subject} ({args.thread_id})"
+            ]
         )
     if args.to_daily_brief:
         _append_to_daily_brief(
@@ -835,19 +902,25 @@ def command_download_attachments(args: argparse.Namespace) -> None:
             destination = target_dir / file_name
 
             if args.dry_run:
-                print(f"Would save: {destination} ({attachment.mime_type}, {attachment.size} bytes)")
+                print(
+                    f"Would save: {destination} ({attachment.mime_type}, {attachment.size} bytes)"
+                )
                 written += 1
                 continue
 
             target_dir.mkdir(parents=True, exist_ok=True)
-            destination.write_bytes(_download_attachment(service, message.id, attachment))
-            print(f"Saved: {destination} ({attachment.mime_type}, {attachment.size} bytes)")
+            destination.write_bytes(
+                _download_attachment(service, message.id, attachment)
+            )
+            print(
+                f"Saved: {destination} ({attachment.mime_type}, {attachment.size} bytes)"
+            )
             written += 1
 
     if written == 0:
-        print('No attachments found in thread.')
+        print("No attachments found in thread.")
         return
-    print(f'Attachments processed: {written}')
+    print(f"Attachments processed: {written}")
 
 
 def _today_query() -> str:
@@ -859,11 +932,15 @@ def _today_query() -> str:
 def command_list_today(args: argparse.Namespace) -> None:
     results = _search_threads(args.account, _today_query(), args.max_results)
     for item in results:
-        print(f"{item.last_at.isoformat(timespec='minutes')} | {item.subject} | {item.latest_from} | {item.snippet}")
+        print(
+            f"{item.last_at.isoformat(timespec='minutes')} | {item.subject} | {item.latest_from} | {item.snippet}"
+        )
     print(f"Threads found today: {len(results)}")
 
 
-def _find_unanswered_threads(account: str, max_results: int) -> list[GmailThreadSummary]:
+def _find_unanswered_threads(
+    account: str, max_results: int
+) -> list[GmailThreadSummary]:
     service = _gmail_service(account)
     my_email = _get_profile_email(service)
     thread_ids = _gmail_list_threads(service, "in:inbox", max_results=max_results * 3)
@@ -901,7 +978,9 @@ def command_list_unanswered(args: argparse.Namespace) -> None:
         ]
         _append_to_inbox(lines)
     if args.to_daily_brief:
-        lines = [f"- Follow up: {item.subject} ({item.latest_from})" for item in results]
+        lines = [
+            f"- Follow up: {item.subject} ({item.latest_from})" for item in results
+        ]
         _append_to_daily_brief(lines)
 
 
@@ -916,24 +995,43 @@ def _resolve_person_query(person_query: str) -> set[str]:
         return candidates
 
     metadata = _parse_frontmatter(note_path.read_text(encoding="utf-8"))
-    emails = {str(item).strip().casefold() for item in _ensure_list(metadata.get("emails")) if str(item).strip()}
-    aliases = {str(item).strip().casefold() for item in _ensure_list(metadata.get("aliases")) if str(item).strip()}
+    emails = {
+        str(item).strip().casefold()
+        for item in _ensure_list(metadata.get("emails"))
+        if str(item).strip()
+    }
+    aliases = {
+        str(item).strip().casefold()
+        for item in _ensure_list(metadata.get("aliases"))
+        if str(item).strip()
+    }
     aliases.add(raw.casefold())
     return emails | aliases
 
 
 def command_list_by_person(args: argparse.Namespace) -> None:
     candidates = _resolve_person_query(args.person)
-    email_query = " OR ".join(f'"{value}"' for value in sorted(candidates) if "@" in value)
+    email_query = " OR ".join(
+        f'"{value}"' for value in sorted(candidates) if "@" in value
+    )
     query = email_query or args.person
     results = _search_threads(args.account, query, args.max_results)
     filtered: list[GmailThreadSummary] = []
     for item in results:
-        haystack = " ".join([item.latest_from_email, item.latest_from, item.subject, " ".join(item.participants)]).casefold()
+        haystack = " ".join(
+            [
+                item.latest_from_email,
+                item.latest_from,
+                item.subject,
+                " ".join(item.participants),
+            ]
+        ).casefold()
         if any(candidate in haystack for candidate in candidates):
             filtered.append(item)
     for item in filtered:
-        print(f"{item.last_at.isoformat(timespec='minutes')} | {item.subject} | {item.latest_from} | {item.thread_id}")
+        print(
+            f"{item.last_at.isoformat(timespec='minutes')} | {item.subject} | {item.latest_from} | {item.thread_id}"
+        )
     print(f"Threads matched: {len(filtered)}")
 
 
@@ -950,9 +1048,13 @@ def _draft_message_bytes(to_email: str, subject: str, body: str) -> bytes:
 
 def command_draft_followup(args: argparse.Namespace) -> None:
     service = _gmail_service(args.account)
-    subject = args.subject or f"Follow-up - {datetime.now().astimezone().date().isoformat()}"
+    subject = (
+        args.subject or f"Follow-up - {datetime.now().astimezone().date().isoformat()}"
+    )
     body = args.body or "Following up on this."
-    raw = base64.urlsafe_b64encode(_draft_message_bytes(args.to, subject, body)).decode("ascii")
+    raw = base64.urlsafe_b64encode(_draft_message_bytes(args.to, subject, body)).decode(
+        "ascii"
+    )
     payload = {"message": {"raw": raw}}
     result = _safe_execute(service.users().drafts().create(userId="me", body=payload))
     print(f"Draft created: {result.get('id')} to {args.to}")
@@ -967,9 +1069,15 @@ def command_draft_reply(args: argparse.Namespace) -> None:
     recipient = latest.from_email
     if not recipient:
         raise RuntimeError("Latest message has no sender email; cannot draft reply")
-    subject = latest.subject if latest.subject.lower().startswith("re:") else f"Re: {latest.subject}"
+    subject = (
+        latest.subject
+        if latest.subject.lower().startswith("re:")
+        else f"Re: {latest.subject}"
+    )
     body = args.body or "Thanks, I will get back to you shortly."
-    raw = base64.urlsafe_b64encode(_draft_message_bytes(recipient, subject, body)).decode("ascii")
+    raw = base64.urlsafe_b64encode(
+        _draft_message_bytes(recipient, subject, body)
+    ).decode("ascii")
     payload = {"message": {"threadId": args.thread_id, "raw": raw}}
     result = _safe_execute(service.users().drafts().create(userId="me", body=payload))
     print(f"Draft reply created: {result.get('id')} in thread {args.thread_id}")
@@ -981,7 +1089,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_auth = sub.add_parser("auth", help="Authenticate and store a token for an account")
+    p_auth = sub.add_parser(
+        "auth", help="Authenticate and store a token for an account"
+    )
     p_auth.add_argument("--account", choices=["private", "personal"], required=True)
     p_auth.set_defaults(func=lambda args: auth_account(args.account))
 
@@ -999,15 +1109,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_sum.add_argument("--dry-run", action="store_true")
     p_sum.set_defaults(func=command_summarize_thread)
 
-    p_attachments = sub.add_parser("download-attachments", help="Download attachments from a Gmail thread into the vault")
-    p_attachments.add_argument("--account", choices=["private", "personal"], required=True)
+    p_attachments = sub.add_parser(
+        "download-attachments",
+        help="Download attachments from a Gmail thread into the vault",
+    )
+    p_attachments.add_argument(
+        "--account", choices=["private", "personal"], required=True
+    )
     p_attachments.add_argument("--thread-id", required=True)
     p_attachments.add_argument("--output-dir", default="")
     p_attachments.add_argument("--dry-run", action="store_true")
     p_attachments.set_defaults(func=command_download_attachments)
 
-    p_unanswered = sub.add_parser("list-unanswered", help="List Inbox threads waiting on your reply")
-    p_unanswered.add_argument("--account", choices=["private", "personal"], required=True)
+    p_unanswered = sub.add_parser(
+        "list-unanswered", help="List Inbox threads waiting on your reply"
+    )
+    p_unanswered.add_argument(
+        "--account", choices=["private", "personal"], required=True
+    )
     p_unanswered.add_argument("--max-results", type=int, default=20)
     p_unanswered.add_argument("--to-inbox", action="store_true")
     p_unanswered.add_argument("--to-daily-brief", action="store_true")
@@ -1018,13 +1137,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_today.add_argument("--max-results", type=int, default=20)
     p_today.set_defaults(func=command_list_today)
 
-    p_person = sub.add_parser("list-by-person", help="List threads related to a person or email")
+    p_person = sub.add_parser(
+        "list-by-person", help="List threads related to a person or email"
+    )
     p_person.add_argument("--account", choices=["private", "personal"], required=True)
     p_person.add_argument("--person", required=True)
     p_person.add_argument("--max-results", type=int, default=20)
     p_person.set_defaults(func=command_list_by_person)
 
-    p_reply = sub.add_parser("draft-reply", help="Create a Gmail draft reply in an existing thread")
+    p_reply = sub.add_parser(
+        "draft-reply", help="Create a Gmail draft reply in an existing thread"
+    )
     p_reply.add_argument("--account", choices=["private", "personal"], required=True)
     p_reply.add_argument("--thread-id", required=True)
     p_reply.add_argument("--body", default="")

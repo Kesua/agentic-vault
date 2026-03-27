@@ -29,4 +29,5 @@ package = false
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
+    "ruff",
 ]
