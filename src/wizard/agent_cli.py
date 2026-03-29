@@ -27,6 +27,12 @@ ASSISTANTS: dict[str, dict[str, str]] = {
         "command": "claude",
         "package": "@anthropic-ai/claude-code",
     },
+    "opencode": {
+        "key": "opencode",
+        "label": "OpenCode",
+        "command": "opencode",
+        "package": "opencode-ai",
+    },
 }
 
 
@@ -139,7 +145,7 @@ def _assistant_status(key: str) -> dict[str, str | bool | None]:
 
 
 def detect() -> dict:
-    assistants = [_assistant_status(key) for key in ("codex", "claude")]
+    assistants = [_assistant_status(key) for key in ("codex", "claude", "opencode")]
     installed = [item for item in assistants if item["installed"]]
     preferred = "codex" if any(item["key"] == "codex" for item in installed) else None
     if not preferred and installed:

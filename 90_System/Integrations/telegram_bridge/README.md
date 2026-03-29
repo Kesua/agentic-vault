@@ -1,13 +1,13 @@
 # Telegram Bridge
 
-Local Telegram -> Codex CLI bridge for `ChiefOfStuffVault`.
+Local Telegram -> Agent CLI (Codex, Claude, OpenCode) bridge for `ChiefOfStuffVault`.
 
 ## What it does
 - Receives Telegram text messages through Bot API long polling.
 - Validates sender against an allowlist.
-- Runs `codex exec` non-interactively in the vault root.
-- Returns the final Codex answer back to Telegram.
-- Allows only one active Codex task at a time.
+- Runs the configured agent (`codex`, `claude`, or `opencode`) non-interactively in the vault root.
+- Returns the final agent answer back to Telegram.
+- Allows only one active agent task at a time.
 - Persists a raw per-user-per-chat session in `runtime/` from `/start` until the next `/start`.
 
 ## Files
@@ -50,9 +50,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File 90_System\\Integrations\\tel
 - Text only. Voice, audio, files, and photos are rejected with guidance.
 - One running job at a time.
 - No public webhook endpoint; polling only.
-- Full raw session history is forwarded until the next `/start`; if Codex later rejects an oversized context, reset the thread with `/start`.
+- Full raw session history is forwarded until the next `/start`; if the agent later rejects an oversized context, reset the thread with `/start`.
 
 ## Runtime control
 - Background start writes the running PID to `runtime\bridge.pid`.
 - Background stop reads `runtime\bridge.pid` and removes stale PID files automatically.
-- In this Codex environment, run background start/stop wrappers outside the sandbox so the bridge process persists and can be stopped reliably.
+- In your specific environment, run background start/stop wrappers outside the sandbox so the bridge process persists and can be stopped reliably.
