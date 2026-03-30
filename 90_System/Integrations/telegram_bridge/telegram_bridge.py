@@ -116,7 +116,8 @@ def load_config(config_path: Path | None) -> BridgeConfig:
     if not allowed_chat_ids:
         raise BridgeError("Missing TELEGRAM_ALLOWED_CHAT_IDS")
 
-    codex_command = env.get("CODEX_COMMAND", "codex").strip() or "codex"
+    codex_command = env.get("AGENT_COMMAND") or env.get("CODEX_COMMAND", "")
+    codex_command = codex_command.strip() or "codex"
     vault_root = _resolve_path(env.get("VAULT_ROOT"), DEFAULT_VAULT_ROOT)
     log_dir = _resolve_path(env.get("BRIDGE_LOG_DIR"), DEFAULT_LOG_DIR)
     runtime_dir = _resolve_path(env.get("BRIDGE_RUNTIME_DIR"), DEFAULT_RUNTIME_DIR)
@@ -381,13 +382,13 @@ def _safe_preview(text: str, limit: int = 200) -> str:
 def _build_help_text() -> str:
     return "\n".join(
         [
-            "Telegram bridge pro Codex CLI.",
+            "Telegram bridge pro AI agenta (Codex/Claude/OpenCode).",
             "",
             "Prikazy:",
             "/start - kratke uvedeni",
             "/help - napoveda",
             "/status - stav bridge a posledni uloha",
-            "/run <dotaz> - spusti dotaz pres Codex",
+            "/run <dotaz> - spusti dotaz pres zvoleneho agenta",
             "",
             "/start zaroven smaze predchozi kontext a zahaji novou session pro tento chat a uzivatele.",
             "V1 podporuje jen textove zpravy.",
@@ -485,8 +486,18 @@ def _build_codex_prompt(
     return "\n".join(lines)
 
 
-def _build_codex_command(config: BridgeConfig, output_path: Path) -> list[str]:
+def _build_codex_command(config: BridgeConfig, output_path: Path, prompt: str) -> list[str]:
     launcher = _normalize_launcher_command(config.codex_command)
+    cmd_str = " ".join(launcher).lower()
+    if "opencode" in cmd_str:
+        return [
+            *launcher,
+            "run",
+            "--dir",
+            str(config.vault_root),
+            prompt,
+        ]
+
     return [
         *launcher,
         "-a",
@@ -554,7 +565,7 @@ def run_codex(
         stdout_path = temp_path / "codex_stdout.txt"
         stderr_path = temp_path / "codex_stderr.txt"
 
-        command = _build_codex_command(config, output_path)
+        command = _build_codex_command(config, output_path, prompt)
         env = dict(os.environ)
         env.setdefault("PYTHONIOENCODING", "utf-8")
 
@@ -580,7 +591,7 @@ def run_codex(
         if not final_text:
             final_text = (completed.stdout or completed.stderr or "").strip()
         if not final_text:
-            final_text = "Codex nedal zadnou odpoved."
+            final_text = "Agent nedal zadnou odpoved."
         return final_text, completed.returncode, f"{duration}s"
     finally:
         try:
@@ -636,7 +647,7 @@ def _handle_prompt(
         )
         if exit_code != 0:
             _append_session_turn(config, session_key, "user", user_text)
-            reply_text = f"Codex skoncil s chybou ({summary}).\n\n{reply_text[:3000]}"  # type: ignore
+            reply_text = f"Agent skoncil s chybou ({summary}).\n\n{reply_text[:3000]}"  # type: ignore
             if _context_limit_hint(reply_text):
                 reply_text += "\n\nPokud je kontext uz prilis dlouhy, posli /start a zacni novou session."
         else:
@@ -664,7 +675,7 @@ def _handle_prompt(
             },
         )
         send_message(
-            config, chat_id, f"Codex prekrocil timeout {config.timeout_seconds}s."
+            config, chat_id, f"Agent prekrocil timeout {config.timeout_seconds}s."
         )
         _append_log(
             config,
