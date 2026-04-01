@@ -12,6 +12,12 @@ STATE_FILE = WIZARD_DIR.parent / "wizard_state.json"
 REPO_ROOT = WIZARD_DIR.parent.parent
 SECRETS_DIR = REPO_ROOT / "90_System" / "secrets"
 INTEGRATIONS_DIR = REPO_ROOT / "90_System" / "Integrations"
+PLAYWRIGHT_PLUGIN_ROOT = Path.home() / "plugins" / "playwright-browser"
+PLAYWRIGHT_PLUGIN_FILES = (
+    PLAYWRIGHT_PLUGIN_ROOT / ".codex-plugin" / "plugin.json",
+    PLAYWRIGHT_PLUGIN_ROOT / ".mcp.json",
+    PLAYWRIGHT_PLUGIN_ROOT / "scripts" / "server.mjs",
+)
 
 
 @dataclass
@@ -27,6 +33,7 @@ class WizardState:
     fireflies_connected: bool = False
     clockify_connected: bool = False
     slack_connected: bool = False
+    browser_playwright_installed: bool = False
     slack_workspaces: list[str] = field(default_factory=list)
     completed_at: str | None = None
 
@@ -63,6 +70,9 @@ def _auto_detect(state: WizardState) -> WizardState:
     if (SECRETS_DIR / "slack_token_private.txt").exists():
         if "private" not in state.slack_workspaces:
             state.slack_workspaces.append("private")
+
+    if all(path.exists() for path in PLAYWRIGHT_PLUGIN_FILES):
+        state.browser_playwright_installed = True
 
     return state
 

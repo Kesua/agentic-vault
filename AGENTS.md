@@ -48,6 +48,7 @@ Scope: everything in this repository.
 - Use `regular_*` for deterministic maintenance flows.
 - Use `bulk_*` for deterministic backfills.
 - Use `adhoc_*` for one-off external-system or local-file work.
+- Local browser automation is available through `adhoc_browser_playwright`, backed by `90_System/Skills/browser_playwright/`.
 
 ## Agent deliverables
 - Prefer actionable checklists at the end of outputs.

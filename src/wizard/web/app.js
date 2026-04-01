@@ -9,6 +9,7 @@ const App = {
     serviceIndex: 0,
     state: {},
     assistantStatus: null,
+    browserStatus: null,
 
     slackTeamId: "",
     slackUserId: "",
@@ -25,6 +26,7 @@ const App = {
             /* server may not be ready yet */
         }
         await this.refreshAssistantStatus();
+        await this.refreshBrowserStatus();
         this.renderProgress();
     },
 
@@ -109,6 +111,14 @@ const App = {
         this.renderAssistantStatus();
     },
 
+    async refreshBrowserStatus() {
+        try {
+            this.browserStatus = await this.api("GET", "/api/browser/status");
+        } catch (_) {
+            this.browserStatus = null;
+        }
+    },
+
     renderAssistantStatus(message, isError) {
         var box = document.getElementById("assistant-setup");
         var statusEl = document.getElementById("assistant-status");
@@ -176,6 +186,41 @@ const App = {
             if (installBtn) {
                 installBtn.disabled = false;
                 installBtn.textContent = "Install Required Assistant";
+            }
+        }
+    },
+
+    /* ----------------------------------------------------------------
+       Playwright Browser
+       ---------------------------------------------------------------- */
+
+    async installBrowserPlugin() {
+        var installBtn = document.getElementById("browser-install-btn");
+        var resultEl = document.getElementById("browser-install-result");
+        resultEl.textContent = "";
+        resultEl.className = "result-message";
+
+        if (installBtn) {
+            installBtn.disabled = true;
+            installBtn.textContent = "Installing...";
+        }
+        resultEl.textContent = "Installing Playwright Browser plugin and Chromium. This can take a few minutes.";
+
+        try {
+            var resp = await this.api("POST", "/api/browser/install", {});
+            this.browserStatus = resp.status || (await this.api("GET", "/api/browser/status"));
+            resultEl.textContent = resp.message;
+            resultEl.classList.add(resp.ok ? "success" : "error");
+            if (resp.ok) {
+                setTimeout(() => this.goToNextService(), 1500);
+            }
+        } catch (err) {
+            resultEl.textContent = err.message;
+            resultEl.classList.add("error");
+        } finally {
+            if (installBtn) {
+                installBtn.disabled = false;
+                installBtn.textContent = "Install Playwright Browser";
             }
         }
     },
@@ -706,8 +751,10 @@ const App = {
         try {
             var resp = await this.api("GET", "/api/status");
             var prereqs = await this.api("GET", "/api/prerequisites");
+            var browser = await this.api("GET", "/api/browser/status");
             this.state = resp;
             this.assistantStatus = prereqs.assistant || this.assistantStatus;
+            this.browserStatus = browser || this.browserStatus;
 
             var grid = document.getElementById("status-grid");
             var services = [
@@ -719,6 +766,7 @@ const App = {
                 { key: "fireflies_connected", name: "Fireflies" },
                 { key: "clockify_connected", name: "Clockify" },
                 { key: "slack_connected", name: "Slack" },
+                { key: "browser_playwright_installed", name: "Playwright Browser", serviceKey: "browser" },
             ];
 
             var selected = this.selectedServices;
@@ -726,10 +774,12 @@ const App = {
                 .map(function (s) {
                     var connected = s.key === "__assistant__"
                         ? prereqs.assistant && prereqs.assistant.installed_any
+                        : s.key === "browser_playwright_installed"
+                            ? browser && browser.installed
                         : resp[s.key];
                     var svcKey = s.key === "__assistant__"
                         ? "__assistant__"
-                        : s.name.toLowerCase().split(" ")[0];
+                        : (s.serviceKey || s.name.toLowerCase().split(" ")[0]);
                     var isSelected = s.key === "__assistant__"
                         ? true
                         : selected.indexOf(svcKey) !== -1;
