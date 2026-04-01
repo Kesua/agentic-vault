@@ -15,3 +15,6 @@ Skills are optional mini-playbooks that the agent can load on demand.
 - deterministic vault-maintenance flow -> `regular_*`
 - deterministic backfill -> `bulk_*`
 - exploratory lookup, retrieval, draft, or one-off create action -> `adhoc_*`
+
+## Notable adhoc skills
+- `adhoc_browser_playwright`: real Chromium browser workflows for DOM inspection, screenshots, response capture, and browser-gated pages

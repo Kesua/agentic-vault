@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -21,6 +22,8 @@ def register_routes(routes: dict) -> None:
     routes["GET /api/assistant/status"] = handle_assistant_status
     routes["POST /api/assistant/install"] = handle_assistant_install
     routes["POST /api/assistant/launch"] = handle_assistant_launch
+    routes["GET /api/browser/status"] = handle_browser_status
+    routes["POST /api/browser/install"] = handle_browser_install
     routes["POST /api/google/upload-credentials"] = handle_google_upload
     routes["POST /api/google/start-auth"] = handle_google_start_auth
     routes["GET /api/google/auth-status"] = handle_google_auth_status
@@ -73,6 +76,92 @@ def handle_assistant_install(_body, _headers) -> dict:
 def handle_assistant_launch(body, _headers) -> dict:
     key = body.get("assistant", "")
     return agent_cli.launch(key)
+
+
+def handle_browser_status(_body, _headers) -> dict:
+    current = state.load()
+    return {
+        "supported": sys.platform in {"win32", "darwin"},
+        "platform": "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else sys.platform,
+        "installed": current.browser_playwright_installed,
+        "plugin_root": str(state.PLAYWRIGHT_PLUGIN_ROOT),
+    }
+
+
+def handle_browser_install(_body, _headers) -> dict:
+    if sys.platform not in {"win32", "darwin"}:
+        return {
+            "ok": False,
+            "message": "Playwright Browser installer is currently only available on Windows and macOS.",
+            "status": handle_browser_status(None, None),
+        }
+
+    installer_name = (
+        "install_playwright_browser_plugin.ps1"
+        if sys.platform == "win32"
+        else "install_playwright_browser_plugin.sh"
+    )
+    installer = (
+        REPO_ROOT
+        / "90_System"
+        / "Skills"
+        / "browser_playwright"
+        / installer_name
+    )
+    if not installer.exists():
+        return {
+            "ok": False,
+            "message": f"Installer not found: {installer}",
+            "status": handle_browser_status(None, None),
+        }
+
+    try:
+        command = (
+            [
+                "powershell",
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                str(installer),
+            ]
+            if sys.platform == "win32"
+            else ["bash", str(installer)]
+        )
+        result = subprocess.run(
+            command,
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=1800,
+        )
+    except subprocess.CalledProcessError as exc:
+        detail = (exc.stderr or exc.stdout or str(exc)).strip()
+        return {
+            "ok": False,
+            "message": f"Playwright Browser install failed: {detail}",
+            "status": handle_browser_status(None, None),
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "message": f"Playwright Browser install failed: {exc}",
+            "status": handle_browser_status(None, None),
+        }
+
+    refreshed_status = handle_browser_status(None, None)
+    output = (result.stdout or "").strip()
+    message = "Installed Playwright Browser plugin and Chromium."
+    if not refreshed_status.get("installed"):
+        message = "Playwright Browser installer finished, but the plugin files were not detected."
+    if output:
+        message = f"{message} {output.splitlines()[-1]}"
+    return {
+        "ok": bool(refreshed_status.get("installed")),
+        "message": message,
+        "status": refreshed_status,
+    }
 
 
 # ---------------------------------------------------------------------------

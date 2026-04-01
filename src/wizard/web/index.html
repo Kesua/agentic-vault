@@ -82,6 +82,14 @@
                             <span class="service-desc">Read and summarize Slack channels</span>
                         </div>
                     </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="browser">
+                        <div class="service-info">
+                            <span class="service-name">Playwright Browser</span>
+                            <span class="badge advanced">optional</span>
+                            <span class="service-desc">Install real-browser tooling for screenshots and browser-gated websites</span>
+                        </div>
+                    </label>
                 </div>
                 <button class="btn-primary" onclick="App.confirmServices()">Continue with Selected Services</button>
             </div>
@@ -326,7 +334,27 @@ settings:
             </div>
         </section>
 
-        <!-- Screen 9: Summary / Dashboard -->
+        <!-- Screen 9: Playwright Browser -->
+        <section class="screen" id="screen-browser" hidden>
+            <div class="card">
+                <h2>Install Playwright Browser</h2>
+                <p>This optional setup installs a local Codex browser plugin plus Chromium for real-browser tasks.</p>
+                <div class="instructions">
+                    <h3>What it enables</h3>
+                    <ol>
+                        <li>Open and inspect real web pages in Chromium</li>
+                        <li>Take screenshots and read DOM content</li>
+                        <li>Capture network responses from browser-gated sites</li>
+                    </ol>
+                </div>
+                <p class="muted">Supported on Windows and macOS. The installer creates a local home plugin outside the vault and registers it for Codex.</p>
+                <button class="btn-primary" id="browser-install-btn" onclick="App.installBrowserPlugin()">Install Playwright Browser</button>
+                <div class="result-message" id="browser-install-result"></div>
+                <button class="btn-secondary" onclick="App.goToNextService()">Skip for Now</button>
+            </div>
+        </section>
+
+        <!-- Screen 10: Summary / Dashboard -->
         <section class="screen" id="screen-summary" hidden>
             <div class="card">
                 <h2>Setup Complete</h2>

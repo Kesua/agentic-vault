@@ -18,6 +18,7 @@ Examples:
 - read Gmail and summarize threads
 - read Todoist and place tasks into Daily Briefs
 - read Fireflies and attach transcript summaries to meetings
+- open a real browser session for web pages that block simple fetch tools
 
 You can think of a skill as a safe connector between this vault and one outside service.
 
@@ -78,6 +79,8 @@ The important skill groups in `90_System/Skills/` are:
   - daily news and weather
 - `create_links`, `files_search`, `deferred_task_queue`, `meeting_attendees_people_sync`, `git_submodules_pull`
   - internal vault helpers
+- `browser_playwright`
+  - optional real-browser automation for browser-gated websites and screenshots
 
 ## Before you start
 
@@ -114,9 +117,11 @@ The script installs Python if needed, creates the virtual environment, installs
 dependencies, and opens a browser-based wizard that walks you through connecting
 each service.
 
-It also checks whether OpenAI Codex, Claude Code, or OpenCode is already installed on
-Windows or macOS. If none is available, the wizard installs OpenAI Codex and
-offers to start a session in this vault when setup is complete.
+It also checks whether OpenAI Codex or Claude Code is already installed on
+Windows or macOS. If neither is available, the wizard installs OpenAI Codex and
+offers to start a session in this vault when setup is complete. The wizard can
+also install optional Playwright browser tooling for browser-first web tasks on
+Windows and macOS.
 
 > **Mac note (ZIP downloads):** if macOS says "permission denied" when you
 > double-click `Setup_Mac.command`, open Terminal once and run:
@@ -177,6 +182,7 @@ Recommended order:
 5. Slack
 6. Clockify
 7. Telegram bridge
+8. Playwright browser tooling (optional)
 
 If you skip one service, only that skill stays unavailable. The rest of the vault can still work.
 
