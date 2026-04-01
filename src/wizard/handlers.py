@@ -81,26 +81,32 @@ def handle_assistant_launch(body, _headers) -> dict:
 def handle_browser_status(_body, _headers) -> dict:
     current = state.load()
     return {
-        "supported": sys.platform == "win32",
+        "supported": sys.platform in {"win32", "darwin"},
+        "platform": "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else sys.platform,
         "installed": current.browser_playwright_installed,
         "plugin_root": str(state.PLAYWRIGHT_PLUGIN_ROOT),
     }
 
 
 def handle_browser_install(_body, _headers) -> dict:
-    if sys.platform != "win32":
+    if sys.platform not in {"win32", "darwin"}:
         return {
             "ok": False,
-            "message": "Playwright Browser installer is currently only available on Windows.",
+            "message": "Playwright Browser installer is currently only available on Windows and macOS.",
             "status": handle_browser_status(None, None),
         }
 
+    installer_name = (
+        "install_playwright_browser_plugin.ps1"
+        if sys.platform == "win32"
+        else "install_playwright_browser_plugin.sh"
+    )
     installer = (
         REPO_ROOT
         / "90_System"
         / "Skills"
         / "browser_playwright"
-        / "install_playwright_browser_plugin.ps1"
+        / installer_name
     )
     if not installer.exists():
         return {
@@ -110,7 +116,7 @@ def handle_browser_install(_body, _headers) -> dict:
         }
 
     try:
-        result = subprocess.run(
+        command = (
             [
                 "powershell",
                 "-NoProfile",
@@ -118,7 +124,12 @@ def handle_browser_install(_body, _headers) -> dict:
                 "Bypass",
                 "-File",
                 str(installer),
-            ],
+            ]
+            if sys.platform == "win32"
+            else ["bash", str(installer)]
+        )
+        result = subprocess.run(
+            command,
             cwd=REPO_ROOT,
             check=True,
             capture_output=True,

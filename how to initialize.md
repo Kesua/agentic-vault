@@ -120,7 +120,8 @@ each service.
 It also checks whether OpenAI Codex or Claude Code is already installed on
 Windows or macOS. If neither is available, the wizard installs OpenAI Codex and
 offers to start a session in this vault when setup is complete. The wizard can
-also install optional Playwright browser tooling for browser-first web tasks.
+also install optional Playwright browser tooling for browser-first web tasks on
+Windows and macOS.
 
 > **Mac note (ZIP downloads):** if macOS says "permission denied" when you
 > double-click `Setup_Mac.command`, open Terminal once and run:

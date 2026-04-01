@@ -21,6 +21,6 @@ A reusable, Obsidian-friendly vault skeleton for personal operating systems with
 1. Run `Setup_Windows.bat` on Windows or `Setup_Mac.command` on macOS.
 2. The setup wizard checks whether OpenAI Codex or Claude Code is already installed.
 3. If neither is available, the wizard installs OpenAI Codex for you.
-4. The wizard can also install optional Playwright browser tooling for browser-first web tasks.
+4. The wizard can also install optional Playwright browser tooling for browser-first web tasks on Windows and macOS.
 5. Review and customize `AGENTS.md`, `SOUL.md`, `MEMORY.md`, and `60_SOPs/_HowIWork.md`.
 6. Adjust `.codex/config.toml` if you want this vault to work with additional external repos.

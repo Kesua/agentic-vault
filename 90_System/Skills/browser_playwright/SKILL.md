@@ -35,8 +35,10 @@ This skill documents the repo-local policy layer for the global `playwright-brow
 - For non-project or external-file workflows, export under `70_Exports/YYYY/MM/DD/`.
 
 ## Installation / repair
-- Install or refresh the global plugin with:
+- Install or refresh the global plugin on Windows with:
   - `powershell -NoProfile -ExecutionPolicy Bypass -File 90_System\Skills\browser_playwright\install_playwright_browser_plugin.ps1`
+- Install or refresh the global plugin on macOS with:
+  - `bash 90_System/Skills/browser_playwright/install_playwright_browser_plugin.sh`
 
 ## Notes
 - The global plugin lives outside the vault as a local Codex plugin and is registered via the home marketplace.
