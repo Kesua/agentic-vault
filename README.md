@@ -1,11 +1,11 @@
-﻿# Agentic Vault
+# Agentic Vault
 
 A reusable, Obsidian-friendly vault skeleton for personal operating systems with repo-local agent skills and automation wrappers.
 
 ## Included
 
 - Markdown-first vault structure for mailbox, daily briefs, meetings, projects, people, and areas
-- Repo-local Codex and Claude guidance
+- Repo-local Codex, Claude, and OpenCode guidance
 - Wrapper skills in `.agents/` plus runnable automation code in `90_System/Skills/`
 - Optional Playwright browser tooling installable from the setup wizard
 - Task queue, integration docs, and note templates
