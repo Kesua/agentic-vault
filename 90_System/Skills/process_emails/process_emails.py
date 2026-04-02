@@ -189,10 +189,23 @@ def _render_summary(
     return rendered
 
 
+def _selected_accounts(args: argparse.Namespace) -> list[str]:
+    accounts = getattr(args, "accounts", None)
+    if not accounts:
+        return ["private", "personal"]
+    normalized: list[str] = []
+    for account in accounts:
+        if account not in {"private", "personal"}:
+            raise ValueError(f"Unknown account: {account}")
+        if account not in normalized:
+            normalized.append(account)
+    return normalized
+
+
 def command_sync_important(args: argparse.Namespace) -> None:
     days_back = _days_back_value(args.days_back, default_days=1)
     all_messages: list[tuple[ga.GmailMessage, str]] = []
-    for account in ("private", "personal"):
+    for account in _selected_accounts(args):
         all_messages.extend(
             _important_messages_for_account(account, days_back=days_back)
         )
@@ -348,7 +361,7 @@ def _sent_threads_for_account(
 def command_sync_sent_threads(args: argparse.Namespace) -> None:
     days_back = _days_back_value(args.days_back, default_days=3)
     thread_sets: list[tuple[list[ga.GmailMessage], str]] = []
-    for account in ("private", "personal"):
+    for account in _selected_accounts(args):
         thread_sets.extend(_sent_threads_for_account(account, days_back=days_back))
 
     written = 0
@@ -393,6 +406,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Backfill this many days for both exports",
     )
+    p_sync.add_argument(
+        "--accounts",
+        nargs="+",
+        choices=["private", "personal"],
+        default=None,
+        help="Only sync the selected Gmail accounts",
+    )
     p_sync.set_defaults(func=command_sync)
 
     p_imp = sub.add_parser(
@@ -404,6 +424,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Backfill this many days of important emails",
+    )
+    p_imp.add_argument(
+        "--accounts",
+        nargs="+",
+        choices=["private", "personal"],
+        default=None,
+        help="Only sync the selected Gmail accounts",
     )
     p_imp.set_defaults(func=command_sync_important)
 
@@ -417,6 +444,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Backfill this many days of sent-thread snapshots",
+    )
+    p_threads.add_argument(
+        "--accounts",
+        nargs="+",
+        choices=["private", "personal"],
+        default=None,
+        help="Only sync the selected Gmail accounts",
     )
     p_threads.set_defaults(func=command_sync_sent_threads)
 

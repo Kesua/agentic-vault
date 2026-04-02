@@ -13,8 +13,6 @@
     </header>
 
     <main class="wizard-main">
-
-        <!-- Screen 1: Welcome -->
         <section class="screen" id="screen-welcome">
             <div class="card">
                 <h2>Welcome to Agentic Vault Setup</h2>
@@ -23,14 +21,15 @@
                 <div class="instructions" id="assistant-setup" hidden>
                     <h3>Agent CLI Check</h3>
                     <p id="assistant-status"></p>
-                    <button class="btn-secondary" id="assistant-install-btn" onclick="App.installAssistant()" hidden>Install Required Assistant</button>
+                    <div class="assistant-choice-list" id="assistant-choice-list" hidden></div>
+                    <p class="muted" id="assistant-choice-help" hidden>Choose one coding assistant to install on this machine. The wizard only installs the option you select here.</p>
+                    <button class="btn-secondary" id="assistant-install-btn" onclick="App.installAssistant()" hidden disabled>Install Selected Assistant</button>
                     <div class="result-message" id="assistant-install-result"></div>
                 </div>
                 <button class="btn-primary" id="welcome-start-btn" onclick="App.goTo('service-picker')">Let's Start</button>
             </div>
         </section>
 
-        <!-- Screen 2: Service Picker -->
         <section class="screen" id="screen-service-picker" hidden>
             <div class="card">
                 <h2>Choose Your Services</h2>
@@ -39,9 +38,9 @@
                     <label class="service-option">
                         <input type="checkbox" name="service" value="google" checked>
                         <div class="service-info">
-                            <span class="service-name">Google Calendar + Gmail</span>
+                            <span class="service-name">Google Workspace</span>
                             <span class="badge recommended">recommended</span>
-                            <span class="service-desc">Sync meetings and process emails</span>
+                            <span class="service-desc">Calendar, Gmail, Drive, Docs, Sheets, and Slides</span>
                         </div>
                     </label>
                     <label class="service-option">
@@ -95,80 +94,99 @@
             </div>
         </section>
 
-        <!-- Screen 3: Google Cloud Project Setup (6 micro-steps) -->
         <section class="screen" id="screen-google" hidden>
             <div class="card" id="google-step-1">
-                <h2>Google Setup <span class="step-counter">(Step 1 of 6)</span></h2>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 1 of 7)</span></h2>
                 <h3>Create a Google Cloud Project</h3>
-                <p>Open the link below and create a new project. Name it anything (e.g. "My Vault").</p>
+                <p>Open the link below and create a new project. Name it anything.</p>
                 <a href="https://console.cloud.google.com/projectcreate" target="_blank" class="btn-link">Open Google Cloud Console</a>
                 <br>
                 <button class="btn-primary" onclick="App.googleStep(2)">Done, Next</button>
             </div>
             <div class="card" id="google-step-2" hidden>
-                <h2>Google Setup <span class="step-counter">(Step 2 of 6)</span></h2>
-                <h3>Enable Calendar API</h3>
-                <p>Click the link, make sure your new project is selected at the top, then click "Enable".</p>
-                <a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" class="btn-link">Enable Calendar API</a>
-                <br>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 2 of 7)</span></h2>
+                <h3>Enable APIs</h3>
+                <p>Enable all of these APIs in the same project:</p>
+                <ul class="inline-links-list">
+                    <li><a href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" class="btn-link">Google Calendar API</a></li>
+                    <li><a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" class="btn-link">Gmail API</a></li>
+                    <li><a href="https://console.cloud.google.com/apis/library/drive.googleapis.com" target="_blank" class="btn-link">Google Drive API</a></li>
+                    <li><a href="https://console.cloud.google.com/apis/library/docs.googleapis.com" target="_blank" class="btn-link">Google Docs API</a></li>
+                    <li><a href="https://console.cloud.google.com/apis/library/sheets.googleapis.com" target="_blank" class="btn-link">Google Sheets API</a></li>
+                    <li><a href="https://console.cloud.google.com/apis/library/slides.googleapis.com" target="_blank" class="btn-link">Google Slides API</a></li>
+                </ul>
                 <button class="btn-primary" onclick="App.googleStep(3)">Done, Next</button>
             </div>
             <div class="card" id="google-step-3" hidden>
-                <h2>Google Setup <span class="step-counter">(Step 3 of 6)</span></h2>
-                <h3>Enable Gmail API</h3>
-                <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" class="btn-link">Enable Gmail API</a>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 3 of 7)</span></h2>
+                <h3>Configure OAuth Consent Screen</h3>
+                <ol>
+                    <li>Open the consent screen page</li>
+                    <li>Choose <strong>External</strong> if prompted</li>
+                    <li>Fill in app name and support email</li>
+                    <li>Add your Google accounts as test users if the app is not published</li>
+                </ol>
+                <a href="https://console.cloud.google.com/auth/overview" target="_blank" class="btn-link">Open OAuth Consent Screen</a>
                 <br>
                 <button class="btn-primary" onclick="App.googleStep(4)">Done, Next</button>
             </div>
             <div class="card" id="google-step-4" hidden>
-                <h2>Google Setup <span class="step-counter">(Step 4 of 6)</span></h2>
-                <h3>Configure OAuth Consent Screen</h3>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 4 of 7)</span></h2>
+                <h3>Create OAuth Client Credentials</h3>
                 <ol>
-                    <li>Open the link below</li>
-                    <li>Choose "External" user type</li>
-                    <li>Fill in app name and support email</li>
-                    <li>Under "Test users", add your own Google email(s)</li>
-                    <li>Save</li>
+                    <li>Open the Credentials page</li>
+                    <li>Click <strong>Create Credentials</strong> and choose <strong>OAuth client ID</strong></li>
+                    <li>Choose <strong>Desktop app</strong></li>
+                    <li>Download the JSON file</li>
                 </ol>
-                <a href="https://console.cloud.google.com/auth/overview" target="_blank" class="btn-link">Open OAuth Consent Screen</a>
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn-link">Open Credentials Page</a>
                 <br>
                 <button class="btn-primary" onclick="App.googleStep(5)">Done, Next</button>
             </div>
             <div class="card" id="google-step-5" hidden>
-                <h2>Google Setup <span class="step-counter">(Step 5 of 6)</span></h2>
-                <h3>Create OAuth Client Credentials</h3>
-                <ol>
-                    <li>Open the Credentials page</li>
-                    <li>Click "Create Credentials" &gt; "OAuth client ID"</li>
-                    <li>Application type: <strong>Desktop app</strong></li>
-                    <li>Click "Create"</li>
-                    <li>Click "Download JSON"</li>
-                </ol>
-                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="btn-link">Open Credentials Page</a>
-                <br>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 5 of 7)</span></h2>
+                <h3>Choose Your Accounts</h3>
+                <div class="radio-group">
+                    <label><input type="radio" name="google-accounts" value="1" checked> One Google account</label>
+                    <label><input type="radio" name="google-accounts" value="2"> Two Google accounts (private + personal)</label>
+                </div>
                 <button class="btn-primary" onclick="App.googleStep(6)">Done, Next</button>
             </div>
             <div class="card" id="google-step-6" hidden>
-                <h2>Google Setup <span class="step-counter">(Step 6 of 6)</span></h2>
-                <h3>Upload the Downloaded JSON File</h3>
-                <div class="upload-zone" id="google-upload-zone">
-                    <p>Drag and drop the JSON file here, or click to browse</p>
-                    <input type="file" id="google-file-input" accept=".json" hidden>
-                </div>
-                <div id="google-upload-status"></div>
-
-                <div id="google-accounts-section" hidden>
-                    <h3>How many Google accounts do you use?</h3>
-                    <div class="radio-group">
-                        <label><input type="radio" name="google-accounts" value="1" checked> One account</label>
-                        <label><input type="radio" name="google-accounts" value="2"> Two accounts (private + personal)</label>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 6 of 7)</span></h2>
+                <h3>Upload Desktop OAuth Client JSON</h3>
+                <p>The same JSON content is reused for Calendar, Gmail, and Google Workspace/Drive. Upload one JSON per account.</p>
+                <div class="upload-grid">
+                    <div>
+                        <h3>Private account</h3>
+                        <div class="upload-zone" id="google-upload-zone-private">
+                            <p>Drop JSON here or click to choose</p>
+                            <input type="file" id="google-file-input-private" accept=".json" hidden>
+                        </div>
+                        <div id="google-upload-status-private"></div>
                     </div>
-                    <div id="google-signin-buttons"></div>
+                    <div id="google-personal-upload-wrap" hidden>
+                        <h3>Personal account</h3>
+                        <div class="upload-zone" id="google-upload-zone-personal">
+                            <p>Drop JSON here or click to choose</p>
+                            <input type="file" id="google-file-input-personal" accept=".json" hidden>
+                        </div>
+                        <div id="google-upload-status-personal"></div>
+                    </div>
                 </div>
+                <button class="btn-primary" onclick="App.saveGoogleCredentials()">Save Google Credentials</button>
+                <div id="google-upload-status"></div>
+            </div>
+            <div class="card" id="google-step-7" hidden>
+                <h2>Google Workspace Setup <span class="step-counter">(Step 7 of 7)</span></h2>
+                <h3>Sign In Per Service</h3>
+                <p>Run the OAuth flow for each enabled account. The wizard stores separate tokens for Calendar, Gmail, and Google Workspace/Drive.</p>
+                <div id="google-signin-buttons"></div>
+                <div class="result-message" id="google-auth-result"></div>
+                <button class="btn-primary" onclick="App.goToNextService()">Continue</button>
             </div>
         </section>
 
-        <!-- Screen 4: Todoist -->
         <section class="screen" id="screen-todoist" hidden>
             <div class="card">
                 <h2>Connect Todoist</h2>
@@ -184,7 +202,6 @@
             </div>
         </section>
 
-        <!-- Screen 5: Telegram -->
         <section class="screen" id="screen-telegram" hidden>
             <div class="card">
                 <h2>Connect Telegram Bridge</h2>
@@ -219,11 +236,14 @@
                         <button class="btn-primary" onclick="App.saveTelegram()">Save Configuration</button>
                     </div>
                     <div class="result-message" id="telegram-result"></div>
+                    <div class="instructions" id="telegram-next-steps" hidden>
+                        <h3>Try it from your coding assistant</h3>
+                        <p>To use the Telegram bridge, first run the <code>adhoc_bridge_Start</code> skill in Codex or the <code>adhoc-bridge-start</code> skill in Claude Code. After that, send messages to your bot in Telegram. When you want to stop it, use <code>adhoc_bridge_end</code> or <code>adhoc-bridge-end</code>.</p>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- Screen 6: Fireflies -->
         <section class="screen" id="screen-fireflies" hidden>
             <div class="card">
                 <h2>Connect Fireflies</h2>
@@ -238,7 +258,6 @@
             </div>
         </section>
 
-        <!-- Screen 7: Clockify -->
         <section class="screen" id="screen-clockify" hidden>
             <div class="card">
                 <h2>Connect Clockify</h2>
@@ -253,16 +272,14 @@
             </div>
         </section>
 
-        <!-- Screen 8: Slack (multi-step) -->
         <section class="screen" id="screen-slack" hidden>
             <div class="card">
                 <h2>Connect Slack</h2>
-
                 <div id="slack-step-1">
                     <h3>Step 1: Create a Slack App</h3>
                     <ol>
                         <li>Open <a href="https://api.slack.com/apps" target="_blank">Slack App Management</a></li>
-                        <li>Click "Create New App" &gt; "From an app manifest"</li>
+                        <li>Click "Create New App" and choose "From an app manifest"</li>
                         <li>Pick your workspace</li>
                         <li>Paste this YAML manifest:</li>
                     </ol>
@@ -299,16 +316,14 @@ settings:
                     <button class="btn-secondary" onclick="App.copyManifest()">Copy Manifest</button>
                     <button class="btn-primary" onclick="App.slackStep(2)">Done, Next</button>
                 </div>
-
                 <div id="slack-step-2" hidden>
                     <h3>Step 2: Install to Workspace</h3>
-                    <p>In the app settings, go to "OAuth &amp; Permissions" and click "Install to Workspace". Approve the requested permissions.</p>
+                    <p>In the app settings, go to "OAuth &amp; Permissions" and click "Install to Workspace".</p>
                     <button class="btn-primary" onclick="App.slackStep(3)">Done, Next</button>
                 </div>
-
                 <div id="slack-step-3" hidden>
                     <h3>Step 3: Paste Bot Token</h3>
-                    <p>After installing, copy the "Bot User OAuth Token" from the OAuth page.</p>
+                    <p>After installing, copy the Bot User OAuth token from the OAuth page.</p>
                     <div class="form-group">
                         <label for="slack-token">Bot User OAuth Token</label>
                         <input type="text" id="slack-token" placeholder="xoxe.xoxb-..." class="input-field">
@@ -317,12 +332,11 @@ settings:
                     <div class="form-group">
                         <label for="slack-alias">Workspace Alias</label>
                         <input type="text" id="slack-alias" value="private" class="input-field">
-                        <span class="help-text">A short name for this workspace (e.g. "private", "work")</span>
+                        <span class="help-text">A short name for this workspace</span>
                     </div>
                     <button class="btn-secondary" onclick="App.testSlack()">Verify Connection</button>
                     <div class="result-message" id="slack-test-result"></div>
                 </div>
-
                 <div id="slack-step-4" hidden>
                     <h3>Step 4: Choose Channels</h3>
                     <p>Select which conversations the vault should be allowed to read.</p>
@@ -334,7 +348,6 @@ settings:
             </div>
         </section>
 
-        <!-- Screen 9: Playwright Browser -->
         <section class="screen" id="screen-browser" hidden>
             <div class="card">
                 <h2>Install Playwright Browser</h2>
@@ -354,7 +367,27 @@ settings:
             </div>
         </section>
 
-        <!-- Screen 10: Summary / Dashboard -->
+        <section class="screen" id="screen-initial-load" hidden>
+            <div class="card">
+                <h2>Initial Vault Load</h2>
+                <p>If you want, the wizard can pull your first batch of meetings, emails, Slack messages, and Todoist tasks into the vault now.</p>
+                <div class="service-list" id="initial-load-options"></div>
+                <div class="form-group">
+                    <label for="initial-load-days-back">How many days back should meetings, emails, and Slack messages be imported?</label>
+                    <input type="number" id="initial-load-days-back" class="input-field" value="7" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="initial-load-days-ahead">How many days ahead should Todoist tasks be synced into daily briefs?</label>
+                    <input type="number" id="initial-load-days-ahead" class="input-field" value="14" min="0">
+                    <span class="help-text">Todoist sync is future-facing, so this controls upcoming daily briefs rather than past ones.</span>
+                </div>
+                <button class="btn-primary" id="initial-load-run-btn" onclick="App.runInitialLoad()">Run Initial Load</button>
+                <button class="btn-secondary" onclick="App.skipInitialLoad()">Skip for Now</button>
+                <div class="result-message" id="initial-load-result"></div>
+                <div class="result-message" id="initial-load-details"></div>
+            </div>
+        </section>
+
         <section class="screen" id="screen-summary" hidden>
             <div class="card">
                 <h2>Setup Complete</h2>
@@ -364,7 +397,8 @@ settings:
                     <ol>
                         <li>Open <strong>Obsidian</strong></li>
                         <li>Choose "Open folder as vault"</li>
-                        <li>Select: <code id="vault-path"></code></li>
+                        <li>Select the current vault folder: <code id="vault-path"></code></li>
+                        <li class="muted">This path is detected dynamically on the machine where setup is running.</li>
                     </ol>
                 </div>
                 <div class="next-steps" id="assistant-try" hidden>
@@ -377,7 +411,6 @@ settings:
                 <button class="btn-secondary" onclick="App.shutdown()">Close Wizard</button>
             </div>
         </section>
-
     </main>
 
     <script src="app.js"></script>

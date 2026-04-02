@@ -1,4 +1,4 @@
-﻿# Skills
+# Skills
 
 Skills are optional mini-playbooks that the agent can load on demand.
 
@@ -18,3 +18,9 @@ Skills are optional mini-playbooks that the agent can load on demand.
 
 ## Notable adhoc skills
 - `adhoc_browser_playwright`: real Chromium browser workflows for DOM inspection, screenshots, response capture, and browser-gated pages
+
+- dhoc_google_drive: repo-local Google Workspace assistant for Drive search, metadata, and exports
+- gdocs: repo-local Google Docs operations through the shared Google workspace runtime
+- gsheets: repo-local Google Sheets operations through the shared Google workspace runtime
+- gslides: repo-local Google Slides operations through the shared Google workspace runtime
+

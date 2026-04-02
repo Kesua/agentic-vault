@@ -475,21 +475,37 @@ def _insert_links_under_month(index_text: str, month_key: str, links: list[str])
     return "".join(lines)
 
 
+def _normalize_accounts(accounts: list[str] | None) -> list[str]:
+    if not accounts:
+        return ["private", "personal"]
+    normalized: list[str] = []
+    for account in accounts:
+        if account not in {"private", "personal"}:
+            raise ValueError(f"Unknown account: {account}")
+        if account not in normalized:
+            normalized.append(account)
+    return normalized
+
+
 def _sync_window(
     *,
     dry_run: bool,
     window_start: datetime,
     window_end: datetime,
     window_label: str,
+    accounts: list[str] | None = None,
 ) -> None:
     template_text = MEETING_TEMPLATE_PATH.read_text(encoding="utf-8")
+    accounts = _normalize_accounts(accounts)
 
-    private_events = fetch_events_in_window(
-        "private", window_start, window_end, "primary"
-    )
-    personal_events = fetch_events_in_window(
-        "personal", window_start, window_end, "primary"
-    )
+    events_by_account: dict[str, list[CalendarEvent]] = {}
+    for account in accounts:
+        events_by_account[account] = fetch_events_in_window(
+            account, window_start, window_end, "primary"
+        )
+
+    private_events = events_by_account.get("private", [])
+    personal_events = events_by_account.get("personal", [])
     events = [
         ev for ev in _dedupe_events(private_events, personal_events) if ev.attendees
     ]
@@ -541,23 +557,33 @@ def _sync_window(
         print("  ...")
 
 
-def sync_today(dry_run: bool = False, days_ahead: int = 14) -> None:
+def sync_today(
+    dry_run: bool = False,
+    days_ahead: int = 14,
+    accounts: list[str] | None = None,
+) -> None:
     window_start, window_end = _upcoming_window_local(days_ahead=days_ahead)
     _sync_window(
         dry_run=dry_run,
         window_start=window_start,
         window_end=window_end,
         window_label=f"today + {days_ahead} day(s)",
+        accounts=accounts,
     )
 
 
-def sync_days_back(dry_run: bool = False, days_back: int = 14) -> None:
+def sync_days_back(
+    dry_run: bool = False,
+    days_back: int = 14,
+    accounts: list[str] | None = None,
+) -> None:
     window_start, window_end = _backfill_window_local(days_back=days_back)
     _sync_window(
         dry_run=dry_run,
         window_start=window_start,
         window_end=window_end,
         window_label=f"last {days_back} day(s)",
+        accounts=accounts,
     )
 
 
@@ -579,6 +605,13 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Backfill meetings from the last N days up to today",
     )
+    p_sync.add_argument(
+        "--accounts",
+        nargs="+",
+        choices=["private", "personal"],
+        default=None,
+        help="Only sync the selected Google Calendar accounts",
+    )
 
     args = parser.parse_args(argv)
 
@@ -588,9 +621,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "sync":
         if args.days_back is not None:
             days_back = _days_back_value(args.days_back, default_days=14)
-            sync_days_back(dry_run=bool(args.dry_run), days_back=days_back)
+            sync_days_back(
+                dry_run=bool(args.dry_run),
+                days_back=days_back,
+                accounts=args.accounts,
+            )
         else:
-            sync_today(dry_run=bool(args.dry_run), days_ahead=14)
+            sync_today(
+                dry_run=bool(args.dry_run),
+                days_ahead=14,
+                accounts=args.accounts,
+            )
         return 0
 
     return 2

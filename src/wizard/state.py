@@ -28,6 +28,8 @@ class WizardState:
     gcal_personal_authed: bool = False
     gmail_private_authed: bool = False
     gmail_personal_authed: bool = False
+    gdrive_private_authed: bool = False
+    gdrive_personal_authed: bool = False
     todoist_connected: bool = False
     telegram_connected: bool = False
     fireflies_connected: bool = False
@@ -42,10 +44,18 @@ SECRET_FILE_MAP: dict[str, tuple[str, bool]] = {
     "gcal_oauth_client_private.json": ("google_credentials_uploaded", True),
     "gcal_oauth_client_personal.json": ("google_credentials_uploaded", True),
     "gcal_oauth_client.json": ("google_credentials_uploaded", True),
+    "gmail_oauth_client_private.json": ("google_credentials_uploaded", True),
+    "gmail_oauth_client_personal.json": ("google_credentials_uploaded", True),
+    "gmail_oauth_client.json": ("google_credentials_uploaded", True),
+    "gdrive_oauth_client_private.json": ("google_credentials_uploaded", True),
+    "gdrive_oauth_client_personal.json": ("google_credentials_uploaded", True),
+    "gdrive_oauth_client.json": ("google_credentials_uploaded", True),
     "gcal_token_private.json": ("gcal_private_authed", True),
     "gcal_token_personal.json": ("gcal_personal_authed", True),
     "gmail_token_private.json": ("gmail_private_authed", True),
     "gmail_token_personal.json": ("gmail_personal_authed", True),
+    "gdrive_token_private.json": ("gdrive_private_authed", True),
+    "gdrive_token_personal.json": ("gdrive_personal_authed", True),
     "todoist_token_personal.json": ("todoist_connected", True),
     "telegram_bridge.env": ("telegram_connected", True),
     "fireflies_api_key.txt": ("fireflies_connected", True),
@@ -55,17 +65,25 @@ SECRET_FILE_MAP: dict[str, tuple[str, bool]] = {
 
 
 def _auto_detect(state: WizardState) -> WizardState:
-    """Scan 90_System/secrets/ and mark services whose files already exist."""
     for filename, (attr, value) in SECRET_FILE_MAP.items():
         if (SECRETS_DIR / filename).exists():
             setattr(state, attr, value)
 
-    if (SECRETS_DIR / "gcal_oauth_client_private.json").exists():
-        if "private" not in state.google_accounts:
-            state.google_accounts.append("private")
-    if (SECRETS_DIR / "gcal_oauth_client_personal.json").exists():
-        if "personal" not in state.google_accounts:
-            state.google_accounts.append("personal")
+    for account in ("private", "personal"):
+        if (
+            (SECRETS_DIR / f"gcal_oauth_client_{account}.json").exists()
+            or (SECRETS_DIR / f"gmail_oauth_client_{account}.json").exists()
+            or (SECRETS_DIR / f"gdrive_oauth_client_{account}.json").exists()
+        ):
+            if account not in state.google_accounts:
+                state.google_accounts.append(account)
+
+    if not state.google_accounts and (
+        (SECRETS_DIR / "gcal_oauth_client.json").exists()
+        or (SECRETS_DIR / "gmail_oauth_client.json").exists()
+        or (SECRETS_DIR / "gdrive_oauth_client.json").exists()
+    ):
+        state.google_accounts.append("private")
 
     if (SECRETS_DIR / "slack_token_private.txt").exists():
         if "private" not in state.slack_workspaces:
@@ -78,7 +96,6 @@ def _auto_detect(state: WizardState) -> WizardState:
 
 
 def load() -> WizardState:
-    """Load persisted state, then overlay auto-detected secrets."""
     state = WizardState()
     if STATE_FILE.exists():
         try:
@@ -92,7 +109,6 @@ def load() -> WizardState:
 
 
 def save(state: WizardState) -> None:
-    """Persist wizard state to disk (no secrets stored here)."""
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(
         json.dumps(dataclasses.asdict(state), indent=2, ensure_ascii=False),
@@ -101,5 +117,4 @@ def save(state: WizardState) -> None:
 
 
 def as_dict() -> dict:
-    """Convenience: load + serialise in one call."""
     return dataclasses.asdict(load())

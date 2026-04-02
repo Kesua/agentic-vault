@@ -20,20 +20,44 @@ ASSISTANTS: dict[str, dict[str, str]] = {
         "label": "OpenAI Codex",
         "command": "codex",
         "package": "@openai/codex",
+        "minimum_access": "ChatGPT Free or any paid ChatGPT plan, or an OpenAI API account",
+        "purchase_label": "OpenAI plans",
+        "purchase_url": "https://openai.com/chatgpt/pricing/",
+        "login_hint": "Sign in with ChatGPT or use an OpenAI API key after install.",
     },
     "claude": {
         "key": "claude",
         "label": "Claude Code",
         "command": "claude",
         "package": "@anthropic-ai/claude-code",
+        "minimum_access": "A Claude.ai account or Anthropic Console account",
+        "purchase_label": "Anthropic pricing",
+        "purchase_url": "https://www.anthropic.com/pricing",
+        "login_hint": "Sign in with Claude.ai or configure Anthropic Console access after install.",
+    },
+    "gemini": {
+        "key": "gemini",
+        "label": "Gemini CLI",
+        "command": "gemini",
+        "package": "@google/gemini-cli",
+        "minimum_access": "A Google account is enough to start; Gemini Code Assist is optional for paid org use",
+        "purchase_label": "Gemini Code Assist",
+        "purchase_url": "https://cloud.google.com/products/gemini/code-assist",
+        "login_hint": "Start Gemini CLI and sign in with Google, or use a Gemini API key.",
     },
     "opencode": {
         "key": "opencode",
         "label": "OpenCode",
         "command": "opencode",
-        "package": "opencode-ai",
+        "package": "opencode-ai@latest",
+        "minimum_access": "No OpenCode license is required; you can use free options or connect your own provider",
+        "purchase_label": "OpenCode Zen",
+        "purchase_url": "https://opencode.ai/docs/zen",
+        "login_hint": "Use OpenCode with its free options, OpenCode Zen, or your own OpenAI/Anthropic/Google provider.",
     },
 }
+
+ASSISTANT_ORDER = ("codex", "claude", "gemini", "opencode")
 
 
 def _run(
@@ -106,11 +130,15 @@ def _resolve_command(base_name: str) -> str | None:
         direct = shutil.which(f"{base_name}.cmd")
         if direct:
             return direct
+        direct = shutil.which(f"{base_name}.exe")
+        if direct:
+            return direct
         appdata = os.environ.get("APPDATA")
         if appdata:
-            candidate = Path(appdata) / "npm" / f"{base_name}.cmd"
-            if candidate.exists():
-                return str(candidate)
+            for suffix in (".cmd", ".exe"):
+                candidate = Path(appdata) / "npm" / f"{base_name}{suffix}"
+                if candidate.exists():
+                    return str(candidate)
         for env_name in ("ProgramFiles", "ProgramFiles(x86)"):
             root = os.environ.get(env_name)
             if not root:
@@ -141,15 +169,21 @@ def _assistant_status(key: str) -> dict[str, str | bool | None]:
         "command": assistant["command"],
         "installed": bool(command_path),
         "path": command_path,
+        "minimum_access": assistant["minimum_access"],
+        "purchase_label": assistant["purchase_label"],
+        "purchase_url": assistant["purchase_url"],
+        "login_hint": assistant["login_hint"],
     }
 
 
 def detect() -> dict:
-    assistants = [_assistant_status(key) for key in ("codex", "claude", "opencode")]
+    assistants = [_assistant_status(key) for key in ASSISTANT_ORDER]
     installed = [item for item in assistants if item["installed"]]
-    preferred = "codex" if any(item["key"] == "codex" for item in installed) else None
-    if not preferred and installed:
-        preferred = installed[0]["key"]
+    preferred = None
+    for key in ASSISTANT_ORDER:
+        if any(item["key"] == key for item in installed):
+            preferred = key
+            break
     return {
         "supported": SUPPORTED_PLATFORM,
         "platform": "windows" if WINDOWS else "macos" if MACOS else sys.platform,
@@ -169,7 +203,7 @@ def _ensure_node() -> dict[str, str | bool]:
         if not winget:
             return {
                 "ok": False,
-                "message": "Node.js is required to install Codex, but winget is not available. Install Node.js LTS, then re-run setup.",
+                "message": "Node.js is required for this install path, but winget is not available. Install Node.js LTS, then re-run setup.",
             }
         try:
             _run(
@@ -193,7 +227,7 @@ def _ensure_node() -> dict[str, str | bool]:
         if not brew:
             return {
                 "ok": False,
-                "message": "Node.js is required to install Codex, but Homebrew is not available. Install Homebrew or Node.js, then re-run setup.",
+                "message": "Node.js is required for this install path, but Homebrew is not available. Install Homebrew or Node.js, then re-run setup.",
             }
         try:
             _run([brew, "install", "node"], timeout=1800)
@@ -217,20 +251,8 @@ def _ensure_node() -> dict[str, str | bool]:
     return {"ok": True, "message": "Installed Node.js."}
 
 
-def install_default() -> dict:
-    status = detect()
-    if not status["supported"]:
-        return {
-            "ok": False,
-            "message": "Automatic assistant installation is only supported on Windows and macOS.",
-        }
-    if status["installed_any"]:
-        return {
-            "ok": True,
-            "message": "A supported coding assistant is already installed.",
-            "status": status,
-        }
-
+def _install_via_npm(key: str) -> dict:
+    assistant = ASSISTANTS[key]
     node_result = _ensure_node()
     if not node_result["ok"]:
         return {"ok": False, "message": node_result["message"], "status": detect()}
@@ -243,39 +265,101 @@ def install_default() -> dict:
             "status": detect(),
         }
 
-    target = ASSISTANTS["codex"]
     try:
-        _run([npm, "install", "-g", target["package"]], timeout=1800)
+        _run([npm, "install", "-g", assistant["package"]], timeout=1800)
     except subprocess.CalledProcessError as exc:
         detail = (exc.stderr or exc.stdout or str(exc)).strip()
         return {
             "ok": False,
-            "message": f"Failed to install {target['label']}: {detail}",
+            "message": f"Failed to install {assistant['label']}: {detail}",
             "status": detect(),
         }
     except Exception as exc:
         return {
             "ok": False,
-            "message": f"Failed to install {target['label']}: {exc}",
+            "message": f"Failed to install {assistant['label']}: {exc}",
             "status": detect(),
         }
 
+    return _finalize_install_status(key)
+
+
+def _install_opencode() -> dict:
+    if WINDOWS:
+        scoop = _resolve_command("scoop")
+        if scoop:
+            try:
+                _run([scoop, "install", "opencode"], timeout=1800)
+                return _finalize_install_status("opencode")
+            except Exception:
+                pass
+        choco = _resolve_command("choco")
+        if choco:
+            try:
+                _run([choco, "install", "opencode", "-y"], timeout=1800)
+                return _finalize_install_status("opencode")
+            except Exception:
+                pass
+    elif MACOS:
+        brew = _resolve_command("brew")
+        if brew:
+            try:
+                _run([brew, "install", "anomalyco/tap/opencode"], timeout=1800)
+                return _finalize_install_status("opencode")
+            except Exception:
+                pass
+    return _install_via_npm("opencode")
+
+
+def _finalize_install_status(key: str) -> dict:
     status = detect()
-    installed = next(
-        (item for item in status["assistants"] if item["key"] == "codex"), None
-    )
+    installed = next((item for item in status["assistants"] if item["key"] == key), None)
     if installed and installed["installed"]:
         return {
             "ok": True,
-            "message": "Installed OpenAI Codex for this machine.",
+            "message": f"Installed {ASSISTANTS[key]['label']} for this machine.",
             "installed": installed,
             "status": status,
         }
     return {
         "ok": False,
-        "message": "Codex installation finished, but the command is still not available. Open a new terminal and re-run setup.",
+        "message": f"{ASSISTANTS[key]['label']} installation finished, but the command is still not available. Open a new terminal and re-run setup.",
         "status": status,
     }
+
+
+def install(key: str) -> dict:
+    if key not in ASSISTANTS:
+        return {"ok": False, "message": f"Unknown assistant: {key}", "status": detect()}
+
+    status = detect()
+    if not status["supported"]:
+        return {
+            "ok": False,
+            "message": "Automatic assistant installation is only supported on Windows and macOS.",
+            "status": status,
+        }
+
+    existing = next((item for item in status["assistants"] if item["key"] == key), None)
+    if existing and existing["installed"]:
+        return {
+            "ok": True,
+            "message": f"{ASSISTANTS[key]['label']} is already installed.",
+            "installed": existing,
+            "status": status,
+        }
+
+    if key == "opencode":
+        return _install_opencode()
+    return _install_via_npm(key)
+
+
+def install_default() -> dict:
+    return install("codex")
+
+
+def _escape_powershell(value: str) -> str:
+    return value.replace("'", "''")
 
 
 def launch(key: str) -> dict:
@@ -288,21 +372,32 @@ def launch(key: str) -> dict:
     if not assistant or not assistant["installed"]:
         return {"ok": False, "message": f"{ASSISTANTS[key]['label']} is not installed."}
 
-    command = assistant["path"] or ASSISTANTS[key]["command"]
+    command = str(assistant["path"] or ASSISTANTS[key]["command"])
+    repo_root = str(REPO_ROOT)
     try:
         if WINDOWS:
-            subprocess.Popen(
-                [
-                    "powershell",
-                    "-NoExit",
-                    "-Command",
-                    f"Set-Location -LiteralPath '{REPO_ROOT}'; & '{command}'",
-                ],
-                cwd=REPO_ROOT,
-            )
+            if command.lower().endswith((".cmd", ".bat")):
+                subprocess.Popen(
+                    [
+                        "cmd.exe",
+                        "/k",
+                        f'cd /d "{repo_root}" && "{command}"',
+                    ],
+                    cwd=REPO_ROOT,
+                )
+            else:
+                subprocess.Popen(
+                    [
+                        "powershell",
+                        "-NoExit",
+                        "-Command",
+                        f"Set-Location -LiteralPath '{_escape_powershell(repo_root)}'; & '{_escape_powershell(command)}'",
+                    ],
+                    cwd=REPO_ROOT,
+                )
         elif MACOS:
-            safe_repo = str(REPO_ROOT).replace("\\", "\\\\").replace('"', '\\"')
-            safe_cmd = str(command).replace("\\", "\\\\").replace('"', '\\"')
+            safe_repo = repo_root.replace("\\", "\\\\").replace('"', '\"')
+            safe_cmd = command.replace("\\", "\\\\").replace('"', '\"')
             apple_script = (
                 'tell application "Terminal"\n'
                 "activate\n"

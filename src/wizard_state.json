@@ -1,0 +1,20 @@
+{
+  "google_credentials_uploaded": true,
+  "google_accounts": [
+    "private"
+  ],
+  "gcal_private_authed": true,
+  "gcal_personal_authed": false,
+  "gmail_private_authed": true,
+  "gmail_personal_authed": false,
+  "gdrive_private_authed": true,
+  "gdrive_personal_authed": false,
+  "todoist_connected": true,
+  "telegram_connected": true,
+  "fireflies_connected": false,
+  "clockify_connected": false,
+  "slack_connected": false,
+  "browser_playwright_installed": true,
+  "slack_workspaces": [],
+  "completed_at": null
+}

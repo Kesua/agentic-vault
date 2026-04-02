@@ -1,4 +1,4 @@
-﻿# Agent Instructions (Agentic Vault)
+# Agent Instructions (Agentic Vault)
 
 Scope: everything in this repository.
 
@@ -49,6 +49,7 @@ Scope: everything in this repository.
 - Use `bulk_*` for deterministic backfills.
 - Use `adhoc_*` for one-off external-system or local-file work.
 - Local browser automation is available through `adhoc_browser_playwright`, backed by `90_System/Skills/browser_playwright/`.
+- Google Workspace access is available through `adhoc_google_drive`, `gdocs`, `gsheets`, and `gslides`, backed by `90_System/Skills/google_drive_assistant/`.
 
 ## Agent deliverables
 - Prefer actionable checklists at the end of outputs.
@@ -58,3 +59,5 @@ Scope: everything in this repository.
 - Deferred queue root: `90_System/TaskQueue/`
 - Use this when work should be deferred because the current run cannot or should not finish it now.
 - Canonical helper: `90_System/Skills/deferred_task_queue/task_queue.py`
+
+

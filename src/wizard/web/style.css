@@ -409,6 +409,7 @@ body {
     border-radius: var(--radius-sm);
     font-size: 14px;
     backdrop-filter: blur(4px);
+    white-space: pre-wrap;
 }
 
 .result-message:empty {
@@ -545,4 +546,77 @@ body {
     .card h2 {
         font-size: 20px;
     }
+}
+
+
+.upload-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.inline-links-list {
+    margin: 12px 0 0 18px;
+}
+
+.inline-links-list li {
+    margin-bottom: 6px;
+}
+
+@media (min-width: 700px) {
+    .upload-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+
+
+.assistant-choice-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.assistant-option {
+    display: block;
+    padding: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.14);
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.1s ease;
+}
+
+.assistant-option:hover {
+    border-color: var(--color-primary);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.assistant-option.selected {
+    border-color: var(--color-primary);
+    background: rgba(59, 130, 246, 0.10);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.15);
+}
+
+.assistant-option input {
+    margin-right: 10px;
+    accent-color: var(--color-primary);
+}
+
+.assistant-option-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.assistant-option-body {
+    display: grid;
+    gap: 6px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+}
+
+.assistant-option-body a {
+    color: var(--color-primary-hover);
 }
