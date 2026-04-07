@@ -59,6 +59,11 @@ A reusable, Obsidian-friendly vault skeleton for a personal operating system —
 |------|-------------|
 | Coding assistant | Detects or installs Claude Code, Codex, Gemini CLI, or OpenCode |
 | Google Workspace | OAuth setup for Calendar, Gmail, Drive, Docs, Sheets, and Slides |
+| Todoist | Saves your personal API token for task sync |
+| Fireflies | Saves your API key for transcript sync |
+| Clockify | Saves your API key for time tracking |
+| Slack | Bot token and workspace config for approved channels |
+| Telegram | Bot token and allowed user/chat IDs for vault messaging |
 | Local AI | Optional LM Studio or Ollama install with model selection and OpenCode integration |
 | Playwright | Optional Chromium-based browser automation tooling |
 
@@ -88,3 +93,58 @@ A reusable, Obsidian-friendly vault skeleton for a personal operating system —
 _setup/            Bootstrap scripts
 src/               Setup wizard source code
 ```
+
+## Available skills
+
+Skills live in `90_System/Skills/`. Each skill is a focused automation with one job.
+
+**Google Workspace**
+
+| Skill | What it does |
+|-------|-------------|
+| `gcal_today` | Syncs upcoming Google Calendar meetings into meeting notes |
+| `adhoc_gcal` | On-demand calendar access and draft event creation |
+| `gmail_assistant` | Searches Gmail, summarizes threads, and creates draft replies |
+| `process_emails` | Exports important emails and replied threads into `00_Mailbox/` |
+| `google_drive_assistant` | Searches Drive and reads/edits Docs, Sheets, and Slides |
+
+**Tasks and time**
+
+| Skill | What it does |
+|-------|-------------|
+| `daily_brief_todoist` | Pulls Todoist tasks into daily briefs |
+| `adhoc_todoist` | On-demand task search and task creation |
+| `clockify_sync` | Lists projects, summarizes time, and creates time entries |
+
+**Meetings and transcripts**
+
+| Skill | What it does |
+|-------|-------------|
+| `fireflies_sync` | Backfills Fireflies transcript summaries into meeting notes |
+| `adhoc_fireflies` | On-demand transcript search and retrieval |
+| `meeting_attendees_people_sync` | Creates or refreshes people notes from meeting attendees |
+
+**Communication**
+
+| Skill | What it does |
+|-------|-------------|
+| `slack_assistant` | Reads approved Slack channels and DMs, summarizes threads |
+| `process_slack` | Exports Slack summaries and thread snapshots into `00_Mailbox/` |
+
+**Vault maintenance**
+
+| Skill | What it does |
+|-------|-------------|
+| `create_links` | Converts aliases to Obsidian wikilinks across the vault |
+| `files_search` | Searches the filesystem with explicit agent-passed paths |
+| `deferred_task_queue` | Queues and runs tasks that cannot finish in the current session |
+| `git_submodules_pull` | Refreshes git submodules during routine maintenance |
+| `Web_Daily_Brief` | Fetches daily news, weather, events, and market snapshot |
+
+**Optional / specialized**
+
+| Skill | What it does |
+|-------|-------------|
+| `browser_playwright` | Real Chromium browser sessions for browser-gated websites |
+| `power_bi_project` | Reviews and edits Power BI Project folders |
+| `claude_code_mirror` | Syncs Claude Code skill definitions into the vault |
