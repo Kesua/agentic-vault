@@ -7,6 +7,8 @@ const App = {
     assistantStatus: null,
     assistantInstallChoice: "",
     browserStatus: null,
+    localAIStatus: null,
+    localAIHardware: null,
     slackTeamId: "",
     slackUserId: "",
     googleFiles: { private: null, personal: null },
@@ -18,6 +20,7 @@ const App = {
         } catch (_) {}
         await this.refreshAssistantStatus();
         await this.refreshBrowserStatus();
+        await this.refreshLocalAIStatus();
         this.initGoogleUpload();
         this.renderProgress();
     },
@@ -42,6 +45,9 @@ const App = {
         if (nxt) nxt.hidden = false;
         this.currentScreen = screenId;
         this.renderProgress();
+        if (screenId === "local-ai") {
+            this.prepareLocalAIScreen();
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
     },
 
@@ -67,7 +73,10 @@ const App = {
         }
         const checks = document.querySelectorAll('input[name="service"]:checked');
         this.selectedServices = Array.from(checks).map(function (c) { return c.value; });
-        this.serviceQueue = this.selectedServices.slice();
+        this.serviceQueue = this.selectedServices.filter(function (item) { return item !== "local-ai"; });
+        if (this.selectedServices.indexOf("local-ai") !== -1) {
+            this.serviceQueue.push("local-ai");
+        }
         this.serviceIndex = 0;
         if (this.serviceQueue.length > 0) {
             this.goTo(this.serviceQueue[0]);
@@ -91,6 +100,14 @@ const App = {
             this.browserStatus = await this.api("GET", "/api/browser/status");
         } catch (_) {
             this.browserStatus = null;
+        }
+    },
+
+    async refreshLocalAIStatus() {
+        try {
+            this.localAIStatus = await this.api("GET", "/api/local-ai/status");
+        } catch (_) {
+            this.localAIStatus = null;
         }
     },
 
@@ -248,6 +265,240 @@ const App = {
                 installBtn.disabled = false;
                 installBtn.textContent = "Install Playwright Browser";
             }
+        }
+    },
+
+    async prepareLocalAIScreen() {
+        await this.refreshLocalAIStatus();
+        this.renderLocalAIStatus();
+        if (this.localAIHardware) {
+            this.renderLocalAIHardware(this.localAIHardware);
+        } else if (this.localAIStatus && this.localAIStatus.recommendation) {
+            var recommendationBox = document.getElementById("local-ai-recommendation");
+            var recommendation = this.localAIStatus.recommendation;
+            if (recommendationBox) {
+                recommendationBox.innerHTML = '<div class="recommendation-badge ' + recommendation.tier + '">' + recommendation.headline + '</div>' +
+                    '<p>' + recommendation.details + '</p>' +
+                    '<p><strong>Suggested starting model:</strong> ' + recommendation.recommended_model + '</p>';
+            }
+            var chosenModelInput = document.getElementById("local-ai-chosen-model-label");
+            if (chosenModelInput && !chosenModelInput.dataset.userEdited) {
+                chosenModelInput.value = recommendation.recommended_model || "Gemma Local";
+            }
+        }
+    },
+
+    localAIRecommendationFromHardware(hardware) {
+        return hardware && hardware.recommendation ? hardware.recommendation : (this.localAIStatus ? this.localAIStatus.recommendation : null);
+    },
+
+    renderLocalAIStatus(message, isError) {
+        var opencodeStatus = document.getElementById("local-ai-opencode-status");
+        var configStatus = document.getElementById("local-ai-config-status");
+        var paths = document.getElementById("local-ai-config-paths");
+        var installBtn = document.getElementById("local-ai-opencode-install-btn");
+        if (opencodeStatus && this.localAIStatus && this.localAIStatus.opencode) {
+            if (this.localAIStatus.opencode.installed) {
+                opencodeStatus.textContent = "OpenCode is already installed on this machine.";
+                opencodeStatus.className = "result-message success";
+                if (installBtn) installBtn.disabled = true;
+            } else {
+                opencodeStatus.textContent = "OpenCode is not installed yet.";
+                opencodeStatus.className = "result-message";
+                if (installBtn) installBtn.disabled = false;
+            }
+        }
+        if (configStatus && this.localAIStatus) {
+            if (this.localAIStatus.opencode_configured) {
+                configStatus.textContent = "An LM Studio provider config was detected for OpenCode.";
+                configStatus.className = "result-message success";
+            } else {
+                configStatus.textContent = "";
+                configStatus.className = "result-message";
+            }
+        }
+        if (paths && this.localAIStatus && this.localAIStatus.config_paths) {
+            paths.textContent = "Global: " + this.localAIStatus.config_paths.global + "\nProject: " + this.localAIStatus.config_paths.project;
+        }
+        if (message) {
+            var resultEl = document.getElementById("local-ai-general-result");
+            if (resultEl) {
+                resultEl.textContent = message;
+                resultEl.className = "result-message " + (isError ? "error" : "success");
+            }
+        }
+    },
+
+    renderLocalAIHardware(hardware) {
+        var box = document.getElementById("local-ai-hardware-result");
+        var recommendationBox = document.getElementById("local-ai-recommendation");
+        var recommendation = this.localAIRecommendationFromHardware(hardware);
+        if (box) {
+            var gpuText = (hardware.gpus || []).length ? hardware.gpus.map(function (gpu) {
+                var suffix = gpu.vram_gb ? " (" + gpu.vram_gb + " GB VRAM)" : "";
+                return gpu.name + suffix;
+            }).join(", ") : "No dedicated GPU details detected";
+            var details = [
+                "OS: " + hardware.os,
+                "Architecture: " + hardware.arch,
+                "Memory: " + (hardware.memory_gb ? hardware.memory_gb + " GB" : "Unknown"),
+                "GPU: " + gpuText,
+            ];
+            if (hardware.os === "windows") {
+                details.push("WSL available: " + (hardware.wsl_available ? "Yes" : "No"));
+            }
+            if (hardware.detection_warning) {
+                details.push("Note: " + hardware.detection_warning);
+            }
+            box.textContent = details.join("\n");
+            box.className = "result-message success";
+        }
+        if (recommendationBox && recommendation) {
+            recommendationBox.innerHTML = '<div class="recommendation-badge ' + recommendation.tier + '">' + recommendation.headline + '</div>' +
+                '<p>' + recommendation.details + '</p>' +
+                '<p><strong>Suggested starting model:</strong> ' + recommendation.recommended_model + '</p>' +
+                ((recommendation.warnings || []).length ? '<p class="muted">' + recommendation.warnings.join(" ") + '</p>' : '');
+        }
+        var chosenModelInput = document.getElementById("local-ai-chosen-model-label");
+        if (chosenModelInput && recommendation && !chosenModelInput.dataset.userEdited) {
+            chosenModelInput.value = recommendation.recommended_model || "Gemma Local";
+        }
+    },
+
+    async scanLocalAIHardware() {
+        var btn = document.getElementById("local-ai-scan-btn");
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Scanning...";
+        }
+        try {
+            this.localAIHardware = await this.api("GET", "/api/local-ai/hardware");
+            await this.refreshWizardState();
+            await this.refreshLocalAIStatus();
+            this.renderLocalAIHardware(this.localAIHardware);
+            this.renderLocalAIStatus();
+        } catch (err) {
+            this.renderLocalAIStatus(err.message, true);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Scan My Hardware";
+            }
+        }
+    },
+
+    async installLocalAIOpenCode() {
+        var btn = document.getElementById("local-ai-opencode-install-btn");
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Installing...";
+        }
+        try {
+            var resp = await this.api("POST", "/api/local-ai/opencode/install", {});
+            this.localAIStatus = await this.api("GET", "/api/local-ai/status");
+            this.renderLocalAIStatus(resp.message, !resp.ok);
+        } catch (err) {
+            this.renderLocalAIStatus(err.message, true);
+        } finally {
+            if (btn) {
+                btn.textContent = "Install OpenCode";
+            }
+        }
+    },
+
+    async checkLocalAIServer() {
+        var btn = document.getElementById("local-ai-server-check-btn");
+        var resultEl = document.getElementById("local-ai-server-result");
+        var modelsEl = document.getElementById("local-ai-server-models");
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Checking...";
+        }
+        resultEl.textContent = "";
+        resultEl.className = "result-message";
+        try {
+            var resp = await this.api("GET", "/api/local-ai/lmstudio/status");
+            await this.refreshWizardState();
+            await this.refreshLocalAIStatus();
+            resultEl.textContent = resp.message;
+            resultEl.classList.add(resp.ok ? "success" : "error");
+            if (modelsEl) {
+                if (resp.models && resp.models.length) {
+                    modelsEl.textContent = "Loaded models:\n" + resp.models.map(function (item) { return "- " + item.id; }).join("\n");
+                    modelsEl.className = "result-message success";
+                } else {
+                    modelsEl.textContent = "";
+                    modelsEl.className = "result-message";
+                }
+            }
+        } catch (err) {
+            resultEl.textContent = err.message;
+            resultEl.classList.add("error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Check LM Studio Server";
+            }
+        }
+    },
+
+    async writeLocalAIConfig() {
+        var scope = document.querySelector('input[name="local-ai-config-scope"]:checked');
+        var modelAlias = document.getElementById("local-ai-model-alias").value || "gemma-local";
+        var chosenModelLabel = document.getElementById("local-ai-chosen-model-label").value || "Gemma Local";
+        var apiKey = document.getElementById("local-ai-api-key").value || "lm-studio";
+        var baseURL = document.getElementById("local-ai-base-url").value || "http://127.0.0.1:1234/v1";
+        var resultEl = document.getElementById("local-ai-config-write-result");
+        resultEl.textContent = "";
+        resultEl.className = "result-message";
+        try {
+            var resp = await this.api("POST", "/api/local-ai/config/write", {
+                scope: scope ? scope.value : "global",
+                model_alias: modelAlias,
+                chosen_model_label: chosenModelLabel,
+                api_key: apiKey,
+                base_url: baseURL
+            });
+            await this.refreshWizardState();
+            await this.refreshLocalAIStatus();
+            this.renderLocalAIStatus();
+            resultEl.textContent = resp.message;
+            resultEl.classList.add(resp.ok ? "success" : "error");
+        } catch (err) {
+            resultEl.textContent = err.message;
+            resultEl.classList.add("error");
+        }
+    },
+
+    async verifyLocalAISetup() {
+        var resultEl = document.getElementById("local-ai-verify-result");
+        var checksEl = document.getElementById("local-ai-verify-checks");
+        resultEl.textContent = "";
+        resultEl.className = "result-message";
+        checksEl.textContent = "";
+        checksEl.className = "result-message";
+        try {
+            var resp = await this.api("POST", "/api/local-ai/verify", {});
+            await this.refreshWizardState();
+            await this.refreshLocalAIStatus();
+            resultEl.textContent = resp.message;
+            resultEl.classList.add(resp.ok ? "success" : "error");
+            if (resp.checks && resp.checks.length) {
+                checksEl.textContent = resp.checks.map(function (item) {
+                    return (item.ok ? "PASS: " : "TODO: ") + item.label;
+                }).join("\n");
+                checksEl.classList.add(resp.ok ? "success" : "error");
+            }
+        } catch (err) {
+            resultEl.textContent = err.message;
+            resultEl.classList.add("error");
+        }
+    },
+
+    markLocalAIModelEdited() {
+        var input = document.getElementById("local-ai-chosen-model-label");
+        if (input) {
+            input.dataset.userEdited = "true";
         }
     },
 
@@ -816,6 +1067,7 @@ const App = {
                 { key: "clockify_connected", name: "Clockify" },
                 { key: "slack_connected", name: "Slack" },
                 { key: "browser_playwright_installed", name: "Playwright Browser", serviceKey: "browser" },
+                { key: "local_ai_completed", name: "Local AI Setup", serviceKey: "local-ai" },
             ];
             var selected = this.selectedServices;
             grid.innerHTML = services.map((s) => {
@@ -826,6 +1078,8 @@ const App = {
                     connected = this.googleConnected(resp);
                 } else if (s.key === "browser_playwright_installed") {
                     connected = browser && browser.installed;
+                } else if (s.key === "local_ai_completed") {
+                    connected = !!resp[s.key];
                 } else {
                     connected = !!resp[s.key];
                 }

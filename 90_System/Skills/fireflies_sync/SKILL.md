@@ -8,7 +8,8 @@ description: "Regular Fireflies sync: fetch transcript summaries in a date windo
 ## What it does
 - Pulls transcripts via Fireflies GraphQL API (`Authorization: Bearer ...`)
 - Matches each transcript to an existing meeting note in `20_Meetings/YYYY/MM/DD/` (does not create notes)
-- Upserts exactly one `## Fireflies (auto)` block per meeting note (safe from `gcal_today` overwrites because it is inserted in the preserved tail)
+- Upserts exactly one `## Fireflies (auto)` block per meeting note (safe from `gcal_today` overwrites because it is inserted in the preserved tail) with metadata, summary, action items, and keywords
+- Fetches the full sentence-level transcript for each matched note and appends it as a `## Fireflies Transcript (auto)` block at the very end of the note, formatted as `[HH:MM:SS] Speaker: text`
 - If multiple transcripts map to the same note, selects one “best” transcript and attaches only that one
 
 ## Matching rules (current)

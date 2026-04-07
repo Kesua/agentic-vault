@@ -36,6 +36,13 @@ class WizardState:
     clockify_connected: bool = False
     slack_connected: bool = False
     browser_playwright_installed: bool = False
+    local_ai_selected: bool = False
+    local_ai_hardware_scanned: bool = False
+    local_ai_recommendation: dict = field(default_factory=dict)
+    opencode_configured: bool = False
+    lmstudio_server_detected: bool = False
+    lmstudio_models: list[str] = field(default_factory=list)
+    local_ai_completed: bool = False
     slack_workspaces: list[str] = field(default_factory=list)
     completed_at: str | None = None
 

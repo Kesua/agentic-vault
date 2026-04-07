@@ -15,6 +15,20 @@
   "clockify_connected": false,
   "slack_connected": false,
   "browser_playwright_installed": true,
+  "local_ai_selected": true,
+  "local_ai_hardware_scanned": true,
+  "local_ai_recommendation": {
+    "tier": "recommend_smaller",
+    "headline": "Recommended: use a smaller local model",
+    "details": "Your GPU appears usable for local AI, but Gemma 4 E4B may be tight. Start with a smaller Gemma or a lighter quantized model.",
+    "recommended_model": "A smaller Gemma Instruct model or a lighter quantized build",
+    "can_continue": true,
+    "warnings": []
+  },
+  "opencode_configured": false,
+  "lmstudio_server_detected": false,
+  "lmstudio_models": [],
+  "local_ai_completed": false,
   "slack_workspaces": [],
   "completed_at": null
 }

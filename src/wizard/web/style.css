@@ -428,6 +428,45 @@ body {
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.recommendation-box {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--color-border);
+}
+
+.recommendation-box:empty {
+    display: none;
+}
+
+.recommendation-box p + p {
+    margin-top: 8px;
+}
+
+.recommendation-badge {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.recommendation-badge.proceed_e4b {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.recommendation-badge.recommend_smaller,
+.recommendation-badge.limited_support {
+    background: rgba(245, 158, 11, 0.15);
+    color: var(--color-warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
 /* ----------------------------------------------------------------
    Upload Zone
    ---------------------------------------------------------------- */

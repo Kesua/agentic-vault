@@ -8,7 +8,7 @@ import sys
 import threading
 from pathlib import Path
 
-from . import agent_cli, google_auth_helper, state, validators
+from . import agent_cli, google_auth_helper, local_ai, state, validators
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SECRETS_DIR = REPO_ROOT / "90_System" / "secrets"
@@ -23,6 +23,12 @@ def register_routes(routes: dict) -> None:
     routes["POST /api/assistant/launch"] = handle_assistant_launch
     routes["GET /api/browser/status"] = handle_browser_status
     routes["POST /api/browser/install"] = handle_browser_install
+    routes["GET /api/local-ai/status"] = handle_local_ai_status
+    routes["GET /api/local-ai/hardware"] = handle_local_ai_hardware
+    routes["POST /api/local-ai/opencode/install"] = handle_local_ai_opencode_install
+    routes["GET /api/local-ai/lmstudio/status"] = handle_local_ai_lmstudio_status
+    routes["POST /api/local-ai/config/write"] = handle_local_ai_config_write
+    routes["POST /api/local-ai/verify"] = handle_local_ai_verify
     routes["POST /api/google/upload-credentials"] = handle_google_upload
     routes["POST /api/google/start-auth"] = handle_google_start_auth
     routes["GET /api/google/auth-status"] = handle_google_auth_status
@@ -158,6 +164,51 @@ def handle_browser_install(_body, _headers) -> dict:
         "message": message,
         "status": refreshed_status,
     }
+
+
+def handle_local_ai_status(_body, _headers) -> dict:
+    return local_ai.local_ai_status()
+
+
+def handle_local_ai_hardware(_body, _headers) -> dict:
+    return local_ai.update_hardware_state()
+
+
+def handle_local_ai_opencode_install(_body, _headers) -> dict:
+    result = agent_cli.install("opencode")
+    current = state.load()
+    current.local_ai_selected = True
+    state.save(current)
+    return result
+
+
+def handle_local_ai_lmstudio_status(_body, _headers) -> dict:
+    status_payload = local_ai.lmstudio_status()
+    current = state.load()
+    current.local_ai_selected = True
+    current.lmstudio_server_detected = bool(status_payload.get("reachable"))
+    current.lmstudio_models = [item["id"] for item in status_payload.get("models", [])]
+    state.save(current)
+    return status_payload
+
+
+def handle_local_ai_config_write(body, _headers) -> dict:
+    scope = body.get("scope", "global")
+    model_alias = body.get("model_alias", local_ai.DEFAULT_MODEL_ALIAS)
+    api_key = body.get("api_key", "lm-studio")
+    chosen_model_label = body.get("chosen_model_label", local_ai.DEFAULT_MODEL_LABEL)
+    base_url = body.get("base_url", local_ai.LM_STUDIO_BASE_URL)
+    return local_ai.write_opencode_config(
+        scope=scope,
+        model_alias=model_alias,
+        api_key=api_key,
+        chosen_model_label=chosen_model_label,
+        base_url=base_url,
+    )
+
+
+def handle_local_ai_verify(_body, _headers) -> dict:
+    return local_ai.verify_setup()
 
 
 def handle_google_upload(body, _headers) -> dict:

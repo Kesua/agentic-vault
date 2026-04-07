@@ -69,6 +69,14 @@ class FirefliesSummary:
 
 
 @dataclass(frozen=True)
+class FirefliesSentence:
+    index: int | None
+    speaker_name: str | None
+    text: str | None
+    start_time: float | None
+
+
+@dataclass(frozen=True)
 class FirefliesTranscript:
     id: str
     title: str | None
@@ -79,6 +87,7 @@ class FirefliesTranscript:
     date_string: str | None
     date_ms: float | None
     summary: FirefliesSummary | None
+    sentences: list[FirefliesSentence] | None = None
 
 
 @dataclass(frozen=True)
@@ -207,6 +216,20 @@ query Transcripts($fromDate: DateTime, $toDate: DateTime, $limit: Int, $skip: In
 }
 """.strip()
 
+_Q_TRANSCRIPT_DETAIL = """
+query Transcript($transcriptId: String!) {
+  transcript(id: $transcriptId) {
+    id
+    sentences {
+      index
+      speaker_name
+      text
+      start_time
+    }
+  }
+}
+""".strip()
+
 
 def _parse_summary(raw: dict | None) -> FirefliesSummary | None:
     if not raw:
@@ -223,6 +246,27 @@ def _parse_summary(raw: dict | None) -> FirefliesSummary | None:
         action_items=(raw.get("action_items") or None),
         keywords=keywords,
     )
+
+
+def fetch_transcript_sentences(api_key: str, transcript_id: str) -> list[FirefliesSentence]:
+    data = _fireflies_graphql(api_key, _Q_TRANSCRIPT_DETAIL, {"transcriptId": transcript_id})
+    raw_sentences = (data.get("transcript") or {}).get("sentences") or []
+    if not isinstance(raw_sentences, list):
+        return []
+    result: list[FirefliesSentence] = []
+    for s in raw_sentences:
+        if not isinstance(s, dict):
+            continue
+        text = (s.get("text") or "").strip()
+        if not text:
+            continue
+        result.append(FirefliesSentence(
+            index=s.get("index"),
+            speaker_name=(s.get("speaker_name") or "").strip() or None,
+            text=text,
+            start_time=s.get("start_time"),
+        ))
+    return result
 
 
 def fetch_transcripts(from_day: date, to_day: date) -> list[FirefliesTranscript]:
@@ -640,7 +684,38 @@ def _upsert_fireflies_block(note_text: str, new_block: str) -> str:
     return (note_text.rstrip() + "\n\n" + new_block.rstrip() + "\n").rstrip() + "\n"
 
 
+def _format_timestamp(seconds: float | None) -> str:
+    if seconds is None:
+        return "??:??:??"
+    total = int(seconds)
+    h, remainder = divmod(total, 3600)
+    m, s = divmod(remainder, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+
+def _render_transcript_block(sentences: list[FirefliesSentence]) -> str:
+    lines: list[str] = ["## Fireflies Transcript (auto)\n\n"]
+    for s in sentences:
+        ts = _format_timestamp(s.start_time)
+        speaker = s.speaker_name or "Unknown"
+        lines.append(f"[{ts}] {speaker}: {s.text}\n")
+    synced = datetime.now().astimezone().isoformat(timespec="seconds")
+    lines.append(f"\n- Synced: {synced}\n")
+    return "".join(lines).rstrip() + "\n"
+
+
+def _upsert_transcript_block(note_text: str, new_block: str) -> str:
+    # Replace if already present.
+    pattern = re.compile(r"(?ms)^##\s+Fireflies\s+Transcript\s+\(auto\)\s*\n.*?(?=^##\s|\Z)")
+    if pattern.search(note_text):
+        return pattern.sub(new_block.rstrip() + "\n", note_text, count=1).rstrip() + "\n"
+
+    # Always append at the end.
+    return (note_text.rstrip() + "\n\n" + new_block.rstrip() + "\n").rstrip() + "\n"
+
+
 def sync_transcripts_to_notes(from_day: date, to_day: date, dry_run: bool) -> None:
+    api_key = _load_api_key()
     transcripts = fetch_transcripts(from_day, to_day)
 
     # Scan meeting notes a bit wider than transcript range (transcripts are created after meetings).
@@ -674,6 +749,17 @@ def sync_transcripts_to_notes(from_day: date, to_day: date, dry_run: bool) -> No
         text = note.path.read_text(encoding="utf-8", errors="replace")
         new_block = _render_fireflies_block(chosen)
         out = _upsert_fireflies_block(text, new_block)
+
+        sentences: list[FirefliesSentence] = []
+        try:
+            sentences = fetch_transcript_sentences(api_key, chosen.id)
+        except Exception as exc:
+            print(f"  ! Could not fetch sentences for {chosen.id}: {exc}", file=sys.stderr)
+
+        if sentences:
+            transcript_block = _render_transcript_block(sentences)
+            out = _upsert_transcript_block(out, transcript_block)
+
         if out == text:
             continue
 

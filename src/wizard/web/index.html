@@ -89,6 +89,14 @@
                             <span class="service-desc">Install real-browser tooling for screenshots and browser-gated websites</span>
                         </div>
                     </label>
+                    <label class="service-option">
+                        <input type="checkbox" name="service" value="local-ai">
+                        <div class="service-info">
+                            <span class="service-name">Local AI Setup</span>
+                            <span class="badge advanced">optional</span>
+                            <span class="service-desc">Run a private AI model on your computer and connect OpenCode to it</span>
+                        </div>
+                    </label>
                 </div>
                 <button class="btn-primary" onclick="App.confirmServices()">Continue with Selected Services</button>
             </div>
@@ -364,6 +372,89 @@ settings:
                 <button class="btn-primary" id="browser-install-btn" onclick="App.installBrowserPlugin()">Install Playwright Browser</button>
                 <div class="result-message" id="browser-install-result"></div>
                 <button class="btn-secondary" onclick="App.goToNextService()">Skip for Now</button>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-local-ai" hidden>
+            <div class="card">
+                <h2>Local AI Setup</h2>
+                <p>This optional setup helps you run a private AI model on your computer instead of sending requests to a cloud provider.</p>
+                <p class="muted">If you choose it, the wizard will check your hardware, suggest a suitable local model, connect OpenCode to LM Studio, and verify the local server.</p>
+
+                <div class="instructions">
+                    <h3>1. Scan This Machine</h3>
+                    <p>The wizard checks your hardware first so it can recommend whether Gemma 4 E4B is a good fit or whether a smaller model is the safer starting point.</p>
+                </div>
+                <button class="btn-primary" id="local-ai-scan-btn" onclick="App.scanLocalAIHardware()">Scan My Hardware</button>
+                <div class="result-message" id="local-ai-hardware-result"></div>
+                <div class="recommendation-box" id="local-ai-recommendation"></div>
+
+                <div class="instructions">
+                    <h3>2. OpenCode</h3>
+                    <p>OpenCode is the CLI this wizard connects to your local model host.</p>
+                    <p class="muted">On Windows, OpenCode works best through WSL, but the native Windows install still works as a fallback.</p>
+                </div>
+                <button class="btn-secondary" id="local-ai-opencode-install-btn" onclick="App.installLocalAIOpenCode()">Install OpenCode</button>
+                <div class="result-message" id="local-ai-opencode-status"></div>
+
+                <div class="instructions">
+                    <h3>3. Install LM Studio and Download a Model</h3>
+                    <ol>
+                        <li><a href="https://lmstudio.ai/download" target="_blank" class="btn-link">Download and install LM Studio</a></li>
+                        <li>Open LM Studio and search for a runnable Gemma model</li>
+                        <li>Use the recommendation above to decide whether to start with Gemma 4 E4B or a smaller model</li>
+                        <li>For capable machines, start with a 4-bit quantized Gemma 4 E4B variant</li>
+                    </ol>
+                </div>
+
+                <div class="instructions">
+                    <h3>4. Start the Local Server</h3>
+                    <p>In LM Studio, start the OpenAI-compatible local server. This wizard expects the base URL below.</p>
+                </div>
+                <div class="form-group">
+                    <label for="local-ai-base-url">LM Studio Base URL</label>
+                    <input type="text" id="local-ai-base-url" class="input-field" value="http://127.0.0.1:1234/v1" readonly>
+                </div>
+                <button class="btn-secondary" id="local-ai-server-check-btn" onclick="App.checkLocalAIServer()">Check LM Studio Server</button>
+                <div class="result-message" id="local-ai-server-result"></div>
+                <div class="result-message" id="local-ai-server-models"></div>
+
+                <div class="instructions">
+                    <h3>5. Write OpenCode Config</h3>
+                    <p>The wizard can save the LM Studio provider config either for this machine or just for this project.</p>
+                </div>
+                <div class="radio-group">
+                    <label><input type="radio" name="local-ai-config-scope" value="global" checked> Save for this machine</label>
+                    <label><input type="radio" name="local-ai-config-scope" value="project"> Save only for this project</label>
+                </div>
+                <div class="form-group">
+                    <label for="local-ai-model-alias">Model Alias</label>
+                    <input type="text" id="local-ai-model-alias" class="input-field" value="gemma-local">
+                </div>
+                <div class="form-group">
+                    <label for="local-ai-chosen-model-label">Model Name in OpenCode</label>
+                    <input type="text" id="local-ai-chosen-model-label" class="input-field" value="Gemma Local" oninput="App.markLocalAIModelEdited()">
+                </div>
+                <div class="form-group">
+                    <label for="local-ai-api-key">API Key</label>
+                    <input type="text" id="local-ai-api-key" class="input-field" value="lm-studio">
+                    <span class="help-text">LM Studio accepts a placeholder value here. The default is fine.</span>
+                </div>
+                <button class="btn-primary" onclick="App.writeLocalAIConfig()">Write OpenCode Config</button>
+                <div class="result-message" id="local-ai-config-status"></div>
+                <div class="result-message" id="local-ai-config-paths"></div>
+                <div class="result-message" id="local-ai-config-write-result"></div>
+
+                <div class="instructions">
+                    <h3>6. Final Verification</h3>
+                    <p>This checks that OpenCode is installed, the config exists, LM Studio is reachable, and at least one local model is loaded.</p>
+                </div>
+                <button class="btn-primary" onclick="App.verifyLocalAISetup()">Verify Local AI Setup</button>
+                <div class="result-message" id="local-ai-verify-result"></div>
+                <div class="result-message" id="local-ai-verify-checks"></div>
+                <div class="result-message" id="local-ai-general-result"></div>
+
+                <button class="btn-secondary" onclick="App.goToNextService()">Continue</button>
             </div>
         </section>
 
