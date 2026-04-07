@@ -1,4 +1,4 @@
-# How To Initialize
+# HOW TO INITIALIZE
 
 This file is for a new, non-technical user of this vault.
 
@@ -67,6 +67,8 @@ The important skill groups in `90_System/Skills/` are:
   - Google Calendar
 - `gmail_assistant` and `process_emails`
   - Gmail
+- `google_drive_assistant`
+  - Google Drive, Docs, Sheets, and Slides
 - `daily_brief_todoist` and `adhoc_todoist`
   - Todoist
 - `fireflies_sync` and `adhoc_fireflies`
@@ -117,11 +119,13 @@ The script installs Python if needed, creates the virtual environment, installs
 dependencies, and opens a browser-based wizard that walks you through connecting
 each service.
 
-It also checks whether OpenAI Codex or Claude Code is already installed on
-Windows or macOS. If neither is available, the wizard installs OpenAI Codex and
-offers to start a session in this vault when setup is complete. The wizard can
-also install optional Playwright browser tooling for browser-first web tasks on
-Windows and macOS.
+It also checks whether Claude Code, OpenAI Codex, Gemini CLI, or OpenCode is
+already installed on Windows or macOS. If none is available, the wizard lets you
+choose which coding assistant to install. The wizard can also:
+
+- configure Google Workspace (Calendar, Gmail, Drive, Docs, Sheets, and Slides)
+- set up a local AI model via LM Studio or Ollama with optional OpenCode integration
+- install optional Playwright browser tooling for browser-first web tasks
 
 > **Mac note (ZIP downloads):** if macOS says "permission denied" when you
 > double-click `Setup_Mac.command`, open Terminal once and run:
@@ -150,7 +154,8 @@ If someone technical is helping you, they should then open PowerShell in this fo
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\pip.exe install -r requirements.txt
+.\.venv\Scripts\pip.exe install uv
+.\.venv\Scripts\uv.exe sync
 ```
 
 ## Step 2: Open the vault
@@ -177,12 +182,14 @@ Recommended order:
 
 1. Google Calendar
 2. Gmail
-3. Todoist
-4. Fireflies
-5. Slack
-6. Clockify
-7. Telegram bridge
-8. Playwright browser tooling (optional)
+3. Google Drive / Docs / Sheets / Slides
+4. Todoist
+5. Fireflies
+6. Slack
+7. Clockify
+8. Telegram bridge
+9. Local AI (LM Studio or Ollama)
+10. Playwright browser tooling (optional)
 
 If you skip one service, only that skill stays unavailable. The rest of the vault can still work.
 
@@ -355,6 +362,63 @@ Before signing in:
 - or use separate browser profiles for work and personal
 
 That avoids connecting the wrong inbox.
+
+---
+
+## Google Drive / Docs / Sheets / Slides setup
+
+Used by:
+
+- `90_System/Skills/google_drive_assistant/`
+
+What it gives you:
+
+- search and browse files across your Google Drive
+- read and export Google Docs, Sheets, and Slides
+- edit and update documents from inside the vault
+
+### Good news
+
+If you already set up Google Calendar or Gmail, you can reuse the same Google Cloud project and the same Desktop App OAuth JSON file.
+
+### What Google needs
+
+Based on Google's official API quickstart documentation:
+
+1. In the same Google Cloud project, turn on:
+   - Google Drive API
+   - Google Docs API
+   - Google Sheets API
+   - Google Slides API
+2. Keep the same Google Auth setup.
+3. Use a Desktop App OAuth client.
+
+### Where to place the file in this vault
+
+Simplest choice:
+
+- save a copy as `90_System/secrets/google_drive_oauth_client.json`
+
+If you want separate files per account, use:
+
+- `90_System/secrets/google_drive_oauth_client_private.json`
+- `90_System/secrets/google_drive_oauth_client_personal.json`
+
+### What happens next
+
+When you sign in for the first time, the vault will create:
+
+- `90_System/secrets/google_drive_token_private.json`
+- `90_System/secrets/google_drive_token_personal.json`
+
+### First sign-in
+
+```powershell
+.\.venv\Scripts\python.exe 90_System\Skills\google_drive_assistant\google_drive_assistant.py auth --account private
+.\.venv\Scripts\python.exe 90_System\Skills\google_drive_assistant\google_drive_assistant.py auth --account personal
+```
+
+Google will open a browser window. Choose the correct account and click `Allow`.
 
 ---
 
@@ -775,6 +839,11 @@ When you are done, your `90_System/secrets/` folder may contain some or all of t
 - `gmail_oauth_client_personal.json`
 - `gmail_token_private.json`
 - `gmail_token_personal.json`
+- `google_drive_oauth_client.json`
+- `google_drive_oauth_client_private.json`
+- `google_drive_oauth_client_personal.json`
+- `google_drive_token_private.json`
+- `google_drive_token_personal.json`
 - `todoist_token_personal.json`
 - `fireflies_api_key.txt`
 - `slack_token_private.txt`
@@ -788,24 +857,62 @@ That is normal.
 
 ---
 
+## Local AI setup (optional)
+
+What it gives you:
+
+- run a language model entirely on your own computer
+- no cloud API key needed
+- works with OpenCode through a local model alias
+
+### What you need
+
+- LM Studio or Ollama installed on your machine
+
+### Easy way: use the wizard
+
+The setup wizard handles this automatically.
+
+During setup, select the `Local AI` step. The wizard will:
+
+1. Detect whether LM Studio or Ollama is already installed.
+2. If not installed, offer to download and install it for you.
+3. Let you choose a model (for example Gemma 3).
+4. Configure OpenCode to use that model with the alias `gemma-local`.
+
+### Manual way
+
+If you prefer to set this up by hand:
+
+1. Install LM Studio from `https://lmstudio.ai` or Ollama from `https://ollama.com`.
+2. Download a model and start the local server.
+3. LM Studio runs by default at `http://127.0.0.1:1234/v1`.
+4. In your `opencode.json`, add a provider entry pointing to that URL.
+
+### Security note
+
+Your local model runs entirely offline. No data is sent to any cloud service.
+
+---
+
 ## Best first-day setup plan
 
 If you want the simplest possible start, do only this:
 
-1. Install Obsidian and Python.
-2. Create `90_System/secrets/`.
-3. Set up Google Calendar.
-4. Set up Gmail.
-5. Set up Todoist.
-6. Stop there.
+1. Double-click `Setup_Windows.bat` or `Setup_Mac.command`.
+2. In the wizard, set up Google Calendar and Gmail.
+3. Set up Todoist.
+4. Stop there.
 
 That already unlocks a large part of the vault.
 
 Later, add:
 
-7. Fireflies
-8. Slack
-9. Clockify
+5. Google Drive / Docs / Sheets / Slides
+6. Fireflies
+7. Slack
+8. Clockify
+9. Local AI (if you want to run models offline)
 10. Telegram bridge
 
 ---
