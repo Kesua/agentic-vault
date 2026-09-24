@@ -7,7 +7,7 @@
 - Open Telegram and start a chat with `@BotFather`.
 - Send `/newbot`.
 - Enter a display name for the bot.
-- Enter a unique username ending with `bot`, for example `jan_codex_bridge_bot`.
+- Enter a unique username ending with `bot`, for example `my_vault_bridge_bot`.
 - BotFather returns a bot token like `123456789:ABC...`.
 - Store that token in a local untracked file, not in git.
 
@@ -17,7 +17,7 @@
   - `TELEGRAM_BOT_TOKEN`
   - `TELEGRAM_ALLOWED_USER_IDS`
   - `TELEGRAM_ALLOWED_CHAT_IDS`
-- Keep `VAULT_ROOT` as `C:\Users\jan.papousek\ChiefOfStuffVault` unless you intentionally run against another repo.
+- Set `VAULT_ROOT` to the absolute path of this vault on your computer.
 
 ## 3. Get your Telegram IDs
 - Start a chat with your new bot and send `/start`.

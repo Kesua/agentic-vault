@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
@@ -223,12 +224,12 @@ def live_check_clockify(key: str) -> dict:
 
 def format_check_slack(token: str) -> dict:
     token = token.strip()
-    if not (token.startswith("xoxb-") or token.startswith("xoxe.xoxb-")):
+    if not (token.startswith("xoxp-") or token.startswith("xoxe.xoxp-")):
         return {
             "valid": False,
-            "message": "Slack bot token should start with 'xoxb-' or 'xoxe.xoxb-'",
+            "message": "Slack user token should start with 'xoxp-' or 'xoxe.xoxp-'",
         }
-    return {"valid": True, "message": "Format OK", "token": token}
+    return {"valid": True, "message": "Format OK"}
 
 
 def live_check_slack(token: str) -> dict:
@@ -251,7 +252,6 @@ def live_check_slack(token: str) -> dict:
             "team_id": data.get("team_id"),
             "user_id": data.get("user_id"),
             "team": data.get("team"),
-            "token": clean_token,
         }
     return {
         "valid": False,
@@ -260,24 +260,33 @@ def live_check_slack(token: str) -> dict:
 
 
 def list_slack_conversations(token: str) -> dict:
-    """Fetch public and private channels the bot can see."""
-    ok, data, err = _make_request(
-        "https://slack.com/api/conversations.list?types=public_channel,private_channel,im&limit=200",
-        headers={"Authorization": f"Bearer {token.strip()}"},
-        api_name="Slack",
-    )
-    if ok and data.get("ok"):
-        channels = [
+    """Fetch user-visible conversations for optional exclusions in setup."""
+    channels = []
+    cursor = ""
+    while True:
+        params = {"types": "public_channel,private_channel,im,mpim", "limit": "200"}
+        if cursor:
+            params["cursor"] = cursor
+        url = "https://slack.com/api/conversations.list?" + urllib.parse.urlencode(params)
+        ok, data, err = _make_request(
+            url,
+            headers={"Authorization": f"Bearer {token.strip()}"},
+            api_name="Slack",
+        )
+        if not ok or not data.get("ok"):
+            return {"ok": False, "error": err or data.get("error", "unknown")}
+        channels.extend(
             {
                 "id": ch["id"],
                 "name": ch.get("name", ch.get("user", "dm")),
                 "type": _channel_type(ch),
-                "is_member": ch.get("is_member", False),
             }
             for ch in data.get("channels", [])
-        ]
-        return {"ok": True, "channels": channels}
-    return {"ok": False, "error": err or data.get("error", "unknown")}
+            if ch.get("id")
+        )
+        cursor = str((data.get("response_metadata") or {}).get("next_cursor") or "").strip()
+        if not cursor:
+            return {"ok": True, "channels": channels}
 
 
 def _channel_type(ch: dict) -> str:

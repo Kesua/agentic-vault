@@ -5,7 +5,7 @@ description: "Merged design build skill set: adaptation, layout, color, typograp
 
 # Ad-hoc Design Build
 
-This file is a grouped copy of the source bundle from `C:\Users\jan.papousek\Downloads\impeccable-style-universal\.agents\skills`, focused on designing and implementing user interfaces.
+This file groups design guidance for this vault, focused on designing and implementing user interfaces.
 
 ## Vault Integration Notes
 - Follow this vault's `AGENTS.md`, `SOUL.md`, and `MEMORY.md` first.

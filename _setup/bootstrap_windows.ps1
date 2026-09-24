@@ -20,9 +20,9 @@ $WIZARD_MODULE    = "src.wizard.server"
 # ---------------------------------------------------------------------------
 
 function Get-PythonVersion {
-    param([string]$Cmd)
+    param([string]$Cmd, [string[]]$CommandArgs = @())
     try {
-        $raw = & $Cmd --version 2>&1 | Out-String
+        $raw = & $Cmd @CommandArgs --version 2>&1 | Out-String
         if ($LASTEXITCODE -ne 0) { return $null }
         # Guard against the Microsoft Store stub that prints nothing useful
         if ($raw -match "Microsoft Store") { return $null }
@@ -32,6 +32,7 @@ function Get-PythonVersion {
                 Minor = [int]$Matches[2]
                 Patch = [int]$Matches[3]
                 Cmd   = $Cmd
+                Args  = $CommandArgs
                 Raw   = $raw.Trim()
             }
         }
@@ -42,6 +43,18 @@ function Get-PythonVersion {
 function Test-PythonMinVersion {
     param([hashtable]$Info)
     return ($Info.Major -eq $MIN_PYTHON_MAJOR -and $Info.Minor -ge $MIN_PYTHON_MINOR)
+}
+
+function Find-InstalledPython {
+    $root = Join-Path $env:LOCALAPPDATA "Programs\Python"
+    if (-not (Test-Path -LiteralPath $root)) { return $null }
+    foreach ($dir in (Get-ChildItem -LiteralPath $root -Directory -Filter "Python3*" | Sort-Object Name -Descending)) {
+        $candidate = Join-Path $dir.FullName "python.exe"
+        if (-not (Test-Path -LiteralPath $candidate)) { continue }
+        $info = Get-PythonVersion -Cmd $candidate
+        if ($null -ne $info -and (Test-PythonMinVersion $info)) { return $info }
+    }
+    return $null
 }
 
 # ---------------------------------------------------------------------------
@@ -61,21 +74,32 @@ Write-Host ""
 Write-Host "  [1/5] Checking Python..."
 
 $PYTHON_CMD = $null
+$PYTHON_ARGS = @()
 
 foreach ($candidate in @("python", "python3", "py")) {
     if ($candidate -eq "py") {
         # Python Launcher uses -3 to target Python 3
-        $info = Get-PythonVersion "py -3"
-        if ($null -eq $info) { $info = Get-PythonVersion "py" }
+        $info = Get-PythonVersion -Cmd "py" -CommandArgs @("-3")
+        if ($null -eq $info) { $info = Get-PythonVersion -Cmd "py" }
     } else {
         $info = Get-PythonVersion $candidate
     }
     if ($null -ne $info -and (Test-PythonMinVersion $info)) {
         $PYTHON_CMD = $info.Cmd
+        $PYTHON_ARGS = $info.Args
         Write-Host "         Found $($info.Raw) at $(Get-Command $candidate -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)"
         break
     } elseif ($null -ne $info) {
         Write-Host "         Found $($info.Raw) but $MIN_PYTHON_MAJOR.$MIN_PYTHON_MINOR+ is required -- skipping"
+    }
+}
+
+if ($null -eq $PYTHON_CMD) {
+    $info = Find-InstalledPython
+    if ($null -ne $info) {
+        $PYTHON_CMD = $info.Cmd
+        $PYTHON_ARGS = $info.Args
+        Write-Host "         Found $($info.Raw) at $($info.Cmd)"
     }
 }
 
@@ -92,12 +116,21 @@ if ($null -eq $PYTHON_CMD) {
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
                     [System.Environment]::GetEnvironmentVariable("Path", "User")
 
-        foreach ($candidate in @("python", "python3")) {
-            $info = Get-PythonVersion $candidate
+        foreach ($candidate in @("python", "python3", "py")) {
+            $info = if ($candidate -eq "py") { Get-PythonVersion -Cmd "py" -CommandArgs @("-3") } else { Get-PythonVersion $candidate }
             if ($null -ne $info -and (Test-PythonMinVersion $info)) {
                 $PYTHON_CMD = $info.Cmd
+                $PYTHON_ARGS = $info.Args
                 Write-Host "         Installed $($info.Raw)"
                 break
+            }
+        }
+        if ($null -eq $PYTHON_CMD) {
+            $info = Find-InstalledPython
+            if ($null -ne $info) {
+                $PYTHON_CMD = $info.Cmd
+                $PYTHON_ARGS = $info.Args
+                Write-Host "         Installed $($info.Raw)"
             }
         }
     }
@@ -133,7 +166,7 @@ if (Test-Path $VENV_PYTHON) {
     } catch {
         Write-Host "         .venv is broken, recreating..."
         Remove-Item -Recurse -Force $VENV_DIR -ErrorAction SilentlyContinue
-        & $PYTHON_CMD -m venv $VENV_DIR
+        & $PYTHON_CMD @PYTHON_ARGS -m venv $VENV_DIR
         if ($LASTEXITCODE -ne 0) {
             Write-Host "  ERROR: Could not create virtual environment."
             Write-Host "  Try deleting the .venv folder and running setup again."
@@ -142,7 +175,7 @@ if (Test-Path $VENV_PYTHON) {
         Write-Host "         Recreated .venv"
     }
 } else {
-    & $PYTHON_CMD -m venv $VENV_DIR
+    & $PYTHON_CMD @PYTHON_ARGS -m venv $VENV_DIR
     if ($LASTEXITCODE -ne 0) {
         Write-Host "  ERROR: Could not create virtual environment."
         Write-Host "  Try deleting the .venv folder and running setup again."
@@ -158,16 +191,17 @@ if (Test-Path $VENV_PYTHON) {
 Write-Host ""
 Write-Host "  [3/5] Installing dependencies (this may take a minute)..."
 
-$PIP = Join-Path $VENV_DIR "Scripts\pip.exe"
 $UV = Join-Path $VENV_DIR "Scripts\uv.exe"
 
-$ErrorActionPreference = "Continue"
 if (-not (Test-Path $UV)) {
-    & $PIP install uv --quiet 2>&1 | Out-Null
+    & $VENV_PYTHON -m pip install uv
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $UV)) {
+        Write-Host "  ERROR: Could not install uv. Check the Python or network error above, then re-run setup."
+        exit 1
+    }
 }
 
-& $UV sync --quiet 2>&1 | Out-Null
-$ErrorActionPreference = "Stop"
+& $UV sync --locked
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Host "  ERROR: Some packages failed to install."
@@ -178,13 +212,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-try {
-    $ErrorActionPreference = "Continue"
-    $pkgCount = (& $UV pip list --format=columns 2>&1 | Measure-Object -Line).Lines - 2
-    $ErrorActionPreference = "Stop"
-    if ($pkgCount -lt 0) { $pkgCount = 0 }
-} catch { $pkgCount = "?" }
-Write-Host "         Installed $pkgCount packages"
+Write-Host "         Dependencies installed from uv.lock"
 
 # ---------------------------------------------------------------------------
 # Phase 4 -- Secrets folder

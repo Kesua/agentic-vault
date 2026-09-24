@@ -1,0 +1,28 @@
+{
+  "workspaces": [
+    {
+      "alias": "private",
+      "team_id": "T12345678",
+      "user_token_file": "90_System/secrets/slack_user_token_private.txt",
+      "self_user_ids": [
+        "U12345678"
+      ],
+      "exclude_conversation_ids": [],
+      "download": {
+        "enabled": false,
+        "max_bytes": 26214400,
+        "allowed_extensions": [
+          ".csv",
+          ".docx",
+          ".jpg",
+          ".md",
+          ".pdf",
+          ".png",
+          ".pptx",
+          ".txt",
+          ".xlsx"
+        ]
+      }
+    }
+  ]
+}

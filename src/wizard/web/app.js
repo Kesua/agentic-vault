@@ -783,7 +783,7 @@ const App = {
             options.push({ key: "emails", label: "Emails", description: "Export important emails and sent-thread snapshots" });
         }
         if (caps.messages) {
-            options.push({ key: "messages", label: "Slack Messages", description: "Export Slack summaries and thread snapshots" });
+            options.push({ key: "messages", label: "Slack Messages", description: "Export user-visible channels and direct messages" });
         }
         if (caps.tasks) {
             options.push({ key: "tasks", label: "Todoist Tasks", description: "Sync upcoming tasks into daily briefs" });
@@ -940,7 +940,7 @@ const App = {
         resultEl.textContent = "";
         resultEl.className = "result-message";
         if (!token.trim()) {
-            errorEl.textContent = "Please paste your bot token.";
+            errorEl.textContent = "Please paste your user token.";
             return;
         }
         try {
@@ -979,45 +979,51 @@ const App = {
 
     renderSlackChannels(channels) {
         var container = document.getElementById("slack-channel-list");
+        container.textContent = "";
         if (!channels.length) {
-            container.innerHTML = '<p class="muted">No channels found. Make sure the bot is added to at least one channel.</p>';
+            container.textContent = "No conversations found. You can save the configuration without exclusions.";
             return;
         }
-        container.innerHTML = channels.map(function (ch) {
-            return '<label class="service-option">' +
-                '<input type="checkbox" name="slack-channel" value="' + ch.id + '" data-name="' + ch.name + '" data-type="' + ch.type + '">' +
-                '<div class="service-info">' +
-                '<span class="service-name">#' + ch.name + "</span>" +
-                '<span class="service-desc">' + ch.type + "</span>" +
-                "</div></label>";
-        }).join("");
+        channels.forEach(function (ch) {
+            var label = document.createElement("label");
+            label.className = "service-option";
+            var checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.name = "slack-exclude";
+            checkbox.value = ch.id;
+            var info = document.createElement("div");
+            info.className = "service-info";
+            var name = document.createElement("span");
+            name.className = "service-name";
+            name.textContent = (ch.type === "im" || ch.type === "mpim" ? "DM: " : "#") + ch.name;
+            var kind = document.createElement("span");
+            kind.className = "service-desc";
+            kind.textContent = ch.type;
+            info.appendChild(name);
+            info.appendChild(kind);
+            label.appendChild(checkbox);
+            label.appendChild(info);
+            container.appendChild(label);
+        });
     },
 
     async saveSlackConfig() {
         var alias = document.getElementById("slack-alias").value;
-        var checks = document.querySelectorAll('input[name="slack-channel"]:checked');
-        var conversations = Array.from(checks).map(function (c) {
-            return {
-                id: c.value,
-                name: c.dataset.name,
-                type: c.dataset.type,
-                retention_class: "work",
-                allow_file_download: false,
-            };
-        });
+        var checks = document.querySelectorAll('input[name="slack-exclude"]:checked');
+        var excludedIds = Array.from(checks).map(function (c) { return c.value; });
         var config = {
             workspaces: [
                 {
                     alias: alias,
                     team_id: this.slackTeamId,
-                    token_file: "90_System/secrets/slack_token_" + alias + ".txt",
-                    jan_user_ids: this.slackUserId ? [this.slackUserId] : [],
+                    user_token_file: "90_System/secrets/slack_user_token_" + alias + ".txt",
+                    self_user_ids: this.slackUserId ? [this.slackUserId] : [],
                     download: {
                         enabled: false,
                         max_bytes: 26214400,
                         allowed_extensions: [".csv", ".docx", ".jpg", ".md", ".pdf", ".png", ".pptx", ".txt", ".xlsx"],
                     },
-                    allow_conversations: conversations,
+                    exclude_conversation_ids: excludedIds,
                 },
             ],
         };
@@ -1031,6 +1037,9 @@ const App = {
                 resultEl.classList.add("success");
                 await this.refreshWizardState();
                 setTimeout(() => this.goToNextService(), 1500);
+            } else {
+                resultEl.textContent = resp.error || "Could not save Slack configuration.";
+                resultEl.classList.add("error");
             }
         } catch (err) {
             resultEl.textContent = err.message;
@@ -1104,8 +1113,44 @@ const App = {
                 return '<div class="status-row"><span>' + s.name + '</span><span class="status-badge ' + cls + '">' + badge + "</span></div>";
             }).join("");
             document.getElementById("vault-path").textContent = prereqs.repo_root;
+            this.renderRoutineSuggestions(resp);
             this.renderTryAssistant();
         } catch (_) {}
+    },
+
+    renderRoutineSuggestions(status) {
+        var list = document.getElementById("routine-suggestions");
+        var prompt = document.getElementById("routine-prompt");
+        if (!list || !prompt) return;
+
+        var accounts = status.google_accounts || [];
+        var connected = [
+            { ready: accounts.some((account) => !!status["gcal_" + account + "_authed"]), skill: "regular_gcal_today", result: "Create upcoming meeting notes" },
+            { ready: accounts.some((account) => !!status["gmail_" + account + "_authed"]), skill: "regular_process_emails", result: "Update the mailbox from email" },
+            { ready: !!status.todoist_connected, skill: "regular_daily_brief_todoist", result: "Refresh tasks in daily briefs" },
+            { ready: !!status.slack_connected, skill: "regular_process_slack", result: "Update Slack summaries in the mailbox" },
+            { ready: !!status.fireflies_connected, skill: "regular_fireflies_sync", result: "Add transcript summaries to meeting notes" },
+        ].filter((item) => item.ready);
+
+        list.replaceChildren();
+        if (!connected.length) {
+            var empty = document.createElement("li");
+            empty.textContent = "Connect a sync service first, then return here for a routine suggestion.";
+            list.appendChild(empty);
+            prompt.textContent = "Connect a service, then ask your assistant to schedule its regular skill.";
+            return;
+        }
+
+        connected.forEach((item) => {
+            var row = document.createElement("li");
+            var name = document.createElement("code");
+            name.textContent = item.skill;
+            row.appendChild(name);
+            row.appendChild(document.createTextNode(" — " + item.result));
+            list.appendChild(row);
+        });
+        prompt.textContent = "In this vault, schedule the repo-local " + connected[0].skill +
+            " skill every weekday at 08:00 in my local timezone. Run it once now and tell me if a run fails.";
     },
 
     renderTryAssistant(message, isError) {

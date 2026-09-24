@@ -110,7 +110,7 @@ Run these from the vault root.
 - List today’s messages:
   - `.\.venv\Scripts\python.exe 90_System\Skills\gmail_assistant\gmail_assistant.py list-today --account personal`
 - List threads by person/email:
-  - `.\.venv\Scripts\python.exe 90_System\Skills\gmail_assistant\gmail_assistant.py list-by-person --account private --person "adam.nowak@weareflo.com"`
+  - `.\.venv\Scripts\python.exe 90_System\Skills\gmail_assistant\gmail_assistant.py list-by-person --account private --person "person@example.com"`
 - Create a reply draft:
   - `.\.venv\Scripts\python.exe 90_System\Skills\gmail_assistant\gmail_assistant.py draft-reply --account private --thread-id <thread_id> --body "Thanks, I will reply in detail tomorrow."`
 - Create a follow-up draft:

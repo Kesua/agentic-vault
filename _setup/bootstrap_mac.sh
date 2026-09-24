@@ -25,7 +25,7 @@ PYTHON_CMD=""
 # ---------------------------------------------------------------------------
 
 detect_python() {
-    for cmd in python3 python; do
+    for cmd in python3 python3.14 python3.13 python3.12 python3.11 python3.10 python3.9 python; do
         if command -v "$cmd" &>/dev/null; then
             local raw
             raw=$("$cmd" --version 2>&1) || continue
@@ -116,14 +116,16 @@ fi
 echo ""
 echo "  [3/5] Installing dependencies (this may take a minute)..."
 
-PIP="$VENV_DIR/bin/pip"
 UV="$VENV_DIR/bin/uv"
 
 if [[ ! -x "$UV" ]]; then
-    "$PIP" install uv --quiet 2>&1 || true
+    "$VENV_PYTHON" -m pip install uv || {
+        echo "  ERROR: Could not install uv. Check the Python or network error above, then re-run setup."
+        exit 1
+    }
 fi
 
-"$UV" sync --quiet 2>&1 || {
+"$UV" sync --locked || {
     echo ""
     echo "  ERROR: Some packages failed to install."
     echo "  If you see compiler errors, try:  xcode-select --install"
@@ -131,8 +133,7 @@ fi
     exit 1
 }
 
-PKG_COUNT=$("$UV" pip list --format=columns 2>/dev/null | tail -n +3 | wc -l | tr -d ' ')
-echo "         Installed ${PKG_COUNT} packages"
+echo "         Dependencies installed from uv.lock"
 
 # ---------------------------------------------------------------------------
 # Phase 4 -- Secrets folder

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import threading
@@ -353,10 +354,12 @@ def handle_clockify_save(body, _headers) -> dict:
 
 def handle_slack_save(body, _headers) -> dict:
     token = body.get("token", "")
-    alias = body.get("alias", "private")
+    alias = str(body.get("alias", "private")).strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", alias):
+        return {"valid": False, "message": "Workspace alias may contain only letters, numbers, _ and -."}
     result = validators.live_check_slack(token)
     if result["valid"]:
-        token_path = SECRETS_DIR / f"slack_token_{alias}.txt"
+        token_path = SECRETS_DIR / f"slack_user_token_{alias}.txt"
         token_path.parent.mkdir(parents=True, exist_ok=True)
         token_path.write_text(token.strip(), encoding="utf-8")
         current = state.load()
@@ -374,6 +377,20 @@ def handle_slack_test(body, _headers) -> dict:
 
 def handle_slack_save_config(body, _headers) -> dict:
     config = body.get("config", {})
+    workspaces = config.get("workspaces") if isinstance(config, dict) else None
+    if not isinstance(workspaces, list) or not workspaces:
+        return {"saved": False, "error": "Add at least one Slack workspace."}
+    for workspace in workspaces:
+        if not isinstance(workspace, dict):
+            return {"saved": False, "error": "Invalid Slack workspace configuration."}
+        alias = str(workspace.get("alias") or "").strip()
+        expected_token_file = f"90_System/secrets/slack_user_token_{alias}.txt"
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", alias) or workspace.get("user_token_file") != expected_token_file:
+            return {"saved": False, "error": "Slack workspace needs a valid alias and user_token_file."}
+        if any(key in workspace for key in ("token_file", "bot_token_file", "allow_conversations", "jan_user_ids")):
+            return {"saved": False, "error": "Legacy bot/allowlist config is not supported. Use a user token and exclusions."}
+        if not isinstance(workspace.get("self_user_ids"), list) or not isinstance(workspace.get("exclude_conversation_ids"), list):
+            return {"saved": False, "error": "Slack workspace needs self_user_ids and exclude_conversation_ids lists."}
     config_path = INTEGRATIONS_DIR / "slack" / "workspaces.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(
@@ -388,7 +405,7 @@ def handle_slack_list_conversations(_body, _headers) -> dict:
     if not current.slack_workspaces:
         return {"ok": False, "error": "No Slack workspace configured yet."}
     alias = current.slack_workspaces[0]
-    token_path = SECRETS_DIR / f"slack_token_{alias}.txt"
+    token_path = SECRETS_DIR / f"slack_user_token_{alias}.txt"
     if not token_path.exists():
         return {"ok": False, "error": f"Token file not found: {token_path.name}"}
     token = token_path.read_text(encoding="utf-8").strip()
@@ -467,7 +484,7 @@ def handle_initial_load_run(body, _headers) -> dict:
     if "messages" in services and current.slack_connected:
         commands.append((
             "Slack messages",
-            ["90_System/Skills/process_slack/process_slack.py", "sync", "--days-back", str(days_back)],
+            ["90_System/Skills/process_slack/process_slack.py", "sync", "--days-back", str(days_back), "--include-dm", "--include-mpim"],
             2400,
         ))
     if "tasks" in services and current.todoist_connected:

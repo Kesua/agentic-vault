@@ -14,7 +14,7 @@ description: "Manage deferred tasks for work that should be picked up later by a
 
 ## Commands (Windows)
 - Enqueue:
-  - `.\.venv\Scripts\python.exe 90_System\Skills\deferred_task_queue\task_queue.py enqueue --title "Task title" --source deferred_follow_up --requested-by jan_papousek --blocked-by permissions --request "Original request" --desired-outcome "What the later runner should do"`
+  - `.\.venv\Scripts\python.exe 90_System\Skills\deferred_task_queue\task_queue.py enqueue --title "Task title" --source deferred_follow_up --requested-by local_user --blocked-by permissions --request "Original request" --desired-outcome "What the later runner should do"`
 - List pending:
   - `.\.venv\Scripts\python.exe 90_System\Skills\deferred_task_queue\task_queue.py list --status pending`
 - Claim oldest pending task:

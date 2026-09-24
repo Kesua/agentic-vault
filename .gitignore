@@ -23,6 +23,7 @@ dist/
 
 # Wizard state (local progress, no secrets)
 _setup/wizard_state.json
+src/wizard_state.json
 .obsidian/
 .claude/settings.local.json
 

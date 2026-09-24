@@ -5,7 +5,7 @@ description: "Merged design review skill set: critique, audit, hardening, optimi
 
 # Ad-hoc Design Review
 
-This file is a grouped copy of the source bundle from `C:\Users\jan.papousek\Downloads\impeccable-style-universal\.agents\skills`, focused on review, refinement, and system quality.
+This file groups design guidance for this vault, focused on review, refinement, and system quality.
 
 ## Vault Integration Notes
 - Follow this vault's `AGENTS.md`, `SOUL.md`, and `MEMORY.md` first.

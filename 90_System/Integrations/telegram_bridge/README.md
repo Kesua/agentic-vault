@@ -1,6 +1,6 @@
 # Telegram Bridge
 
-Local Telegram -> Agent CLI (Codex, Claude, OpenCode) bridge for `ChiefOfStuffVault`.
+Local Telegram -> Agent CLI (Codex, Claude, OpenCode) bridge for `this vault`.
 
 ## What it does
 - Receives Telegram text messages through Bot API long polling.

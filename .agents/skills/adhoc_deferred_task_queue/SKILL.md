@@ -22,7 +22,7 @@ This is a **wrapper** skill for the repo automation in `90_System/Skills/deferre
 
 ## Run (from the vault repo root)
 - Enqueue a task:
-  - `.\.venv\Scripts\python.exe 90_System\Skills\deferred_task_queue\task_queue.py enqueue --title "Task title" --source deferred_follow_up --requested-by jan_papousek --blocked-by permissions --blocked-reason "The current environment could not complete the action safely" --request "Original request" --desired-outcome "What the later runner should do"`
+  - `.\.venv\Scripts\python.exe 90_System\Skills\deferred_task_queue\task_queue.py enqueue --title "Task title" --source deferred_follow_up --requested-by local_user --blocked-by permissions --blocked-reason "The current environment could not complete the action safely" --request "Original request" --desired-outcome "What the later runner should do"`
 - List pending tasks:
   - `.\.venv\Scripts\python.exe 90_System\Skills\deferred_task_queue\task_queue.py list --status pending`
 - Full docs:

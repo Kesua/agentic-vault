@@ -8,8 +8,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 WIZARD_DIR = Path(__file__).resolve().parent
-STATE_FILE = WIZARD_DIR.parent / "wizard_state.json"
 REPO_ROOT = WIZARD_DIR.parent.parent
+STATE_FILE = REPO_ROOT / "_setup" / "wizard_state.json"
+LEGACY_STATE_FILE = WIZARD_DIR.parent / "wizard_state.json"
 SECRETS_DIR = REPO_ROOT / "90_System" / "secrets"
 INTEGRATIONS_DIR = REPO_ROOT / "90_System" / "Integrations"
 PLAYWRIGHT_PLUGIN_ROOT = Path.home() / "plugins" / "playwright-browser"
@@ -67,11 +68,18 @@ SECRET_FILE_MAP: dict[str, tuple[str, bool]] = {
     "telegram_bridge.env": ("telegram_connected", True),
     "fireflies_api_key.txt": ("fireflies_connected", True),
     "clockify_token.txt": ("clockify_connected", True),
-    "slack_token_private.txt": ("slack_connected", True),
+    "slack_user_token_private.txt": ("slack_connected", True),
 }
 
 
 def _auto_detect(state: WizardState) -> WizardState:
+    # Saved progress is a hint. File-backed connection status must reflect
+    # what is actually present now, including after a user removes credentials.
+    for attr, _ in set(SECRET_FILE_MAP.values()):
+        setattr(state, attr, False)
+    state.google_accounts = []
+    state.browser_playwright_installed = False
+
     for filename, (attr, value) in SECRET_FILE_MAP.items():
         if (SECRETS_DIR / filename).exists():
             setattr(state, attr, value)
@@ -92,9 +100,23 @@ def _auto_detect(state: WizardState) -> WizardState:
     ):
         state.google_accounts.append("private")
 
-    if (SECRETS_DIR / "slack_token_private.txt").exists():
-        if "private" not in state.slack_workspaces:
-            state.slack_workspaces.append("private")
+    state.slack_workspaces = sorted(
+        path.stem.removeprefix("slack_user_token_")
+        for path in SECRETS_DIR.glob("slack_user_token_*.txt")
+    ) if SECRETS_DIR.exists() else []
+    state.slack_connected = False
+    config_path = INTEGRATIONS_DIR / "slack" / "workspaces.json"
+    if config_path.exists():
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            for workspace in config.get("workspaces", []):
+                alias = workspace.get("alias", "")
+                expected = f"90_System/secrets/slack_user_token_{alias}.txt"
+                if alias in state.slack_workspaces and workspace.get("user_token_file", "").replace("\\", "/") == expected:
+                    state.slack_connected = True
+                    break
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
 
     if all(path.exists() for path in PLAYWRIGHT_PLUGIN_FILES):
         state.browser_playwright_installed = True
@@ -104,9 +126,10 @@ def _auto_detect(state: WizardState) -> WizardState:
 
 def load() -> WizardState:
     state = WizardState()
-    if STATE_FILE.exists():
+    progress_file = STATE_FILE if STATE_FILE.exists() else LEGACY_STATE_FILE
+    if progress_file.exists():
         try:
-            data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+            data = json.loads(progress_file.read_text(encoding="utf-8"))
             for key, value in data.items():
                 if hasattr(state, key):
                     setattr(state, key, value)

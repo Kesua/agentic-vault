@@ -78,7 +78,7 @@
                         <div class="service-info">
                             <span class="service-name">Slack</span>
                             <span class="badge advanced">advanced</span>
-                            <span class="service-desc">Read and summarize Slack channels</span>
+                            <span class="service-desc">Read user-visible Slack channels and direct messages</span>
                         </div>
                     </label>
                     <label class="service-option">
@@ -293,13 +293,9 @@
                     </ol>
                     <pre class="code-block" id="slack-manifest-code">display_information:
   name: Vault Slack Read
-features:
-  bot_user:
-    display_name: Vault Slack Read
-    always_online: false
 oauth_config:
   scopes:
-    bot:
+    user:
       - channels:history
       - channels:read
       - groups:history
@@ -310,17 +306,13 @@ oauth_config:
       - mpim:read
       - users:read
       - users:read.email
-      - chat:write
-      - chat:write.public
-      - im:write
-      - mpim:write
-      - users:read
+      - files:read
 settings:
   interactivity:
     is_enabled: false
   org_deploy_enabled: false
   socket_mode_enabled: false
-  token_rotation_enabled: true</pre>
+  token_rotation_enabled: false</pre>
                     <button class="btn-secondary" onclick="App.copyManifest()">Copy Manifest</button>
                     <button class="btn-primary" onclick="App.slackStep(2)">Done, Next</button>
                 </div>
@@ -330,11 +322,11 @@ settings:
                     <button class="btn-primary" onclick="App.slackStep(3)">Done, Next</button>
                 </div>
                 <div id="slack-step-3" hidden>
-                    <h3>Step 3: Paste Bot Token</h3>
-                    <p>After installing, copy the Bot User OAuth token from the OAuth page.</p>
+                    <h3>Step 3: Paste User Token</h3>
+                    <p>After installing, copy the User OAuth Token from the OAuth page. This token reads conversations visible to your Slack user.</p>
                     <div class="form-group">
-                        <label for="slack-token">Bot User OAuth Token</label>
-                        <input type="text" id="slack-token" placeholder="xoxe.xoxb-..." class="input-field">
+                        <label for="slack-token">User OAuth Token</label>
+                        <input type="password" id="slack-token" placeholder="xoxp-..." autocomplete="off" class="input-field">
                         <div class="field-error" id="slack-token-error"></div>
                     </div>
                     <div class="form-group">
@@ -346,9 +338,9 @@ settings:
                     <div class="result-message" id="slack-test-result"></div>
                 </div>
                 <div id="slack-step-4" hidden>
-                    <h3>Step 4: Choose Channels</h3>
-                    <p>Select which conversations the vault should be allowed to read.</p>
-                    <button class="btn-secondary" onclick="App.loadSlackChannels()">Load My Channels</button>
+                    <h3>Step 4: Exclude Conversations</h3>
+                    <p>The vault can read channels and direct messages visible to your Slack user. Check any conversations to exclude. Leave all unchecked to include all visible conversations. File downloads stay off.</p>
+                    <button class="btn-secondary" onclick="App.loadSlackChannels()">Load My Conversations</button>
                     <div id="slack-channel-list"></div>
                     <button class="btn-primary" onclick="App.saveSlackConfig()">Save Slack Configuration</button>
                     <div class="result-message" id="slack-config-result"></div>
@@ -461,7 +453,7 @@ settings:
         <section class="screen" id="screen-initial-load" hidden>
             <div class="card">
                 <h2>Initial Vault Load</h2>
-                <p>If you want, the wizard can pull your first batch of meetings, emails, Slack messages, and Todoist tasks into the vault now.</p>
+                <p>If you want, the wizard can pull your first batch of meetings, emails, Slack messages, and Todoist tasks into the vault now. Initial load runs once; set up a routine after this wizard to keep notes current.</p>
                 <div class="service-list" id="initial-load-options"></div>
                 <div class="form-group">
                     <label for="initial-load-days-back">How many days back should meetings, emails, and Slack messages be imported?</label>
@@ -491,6 +483,15 @@ settings:
                         <li>Select the current vault folder: <code id="vault-path"></code></li>
                         <li class="muted">This path is detected dynamically on the machine where setup is running.</li>
                     </ol>
+                </div>
+                <div class="next-steps">
+                    <h3>Keep your notes current</h3>
+                    <p>Initial load runs once. This wizard does not create a recurring schedule.</p>
+                    <p>Choose a connected service below. Ask Codex, Claude Code, or another assistant with recurring tasks to schedule the matching repo-local skill in this vault. If your assistant has no scheduler, use one that starts the assistant here.</p>
+                    <ul id="routine-suggestions"></ul>
+                    <p>Example request to your assistant:</p>
+                    <pre class="code-block" id="routine-prompt"></pre>
+                    <p class="muted">The combined <code>regular_day_start</code> and <code>regular_day_end</code> skills are useful after you connect all services they run.</p>
                 </div>
                 <div class="next-steps" id="assistant-try" hidden>
                     <h3>Try it now</h3>

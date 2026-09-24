@@ -21,5 +21,9 @@ This is a **wrapper** skill for the repo automation in `90_System/Skills/adhoc_t
   - `.\.venv\Scripts\python.exe 90_System\Skills\adhoc_todoist\adhoc_todoist.py create-task --content "Planning" --project "Admin" --label work --label planning --due-datetime "2026-03-12T10:00:00+01:00" --duration-minutes 45`
 - Create a subtask in a section and assign it:
   - `.\.venv\Scripts\python.exe 90_System\Skills\adhoc_todoist\adhoc_todoist.py create-task --content "Prepare agenda" --project "Admin" --section "Meetings" --parent-id <task_id> --assignee-id <user_id>`
+- Move an existing task under a parent:
+  - `.\.venv\Scripts\python.exe 90_System\Skills\adhoc_todoist\adhoc_todoist.py move-task --task-id <task_id> --parent-id <parent_id>`
+- Remove a task due date:
+  - `.\.venv\Scripts\python.exe 90_System\Skills\adhoc_todoist\adhoc_todoist.py clear-due --task-id <task_id>`
 - Full docs:
   - `90_System/Skills/adhoc_todoist/SKILL.md`

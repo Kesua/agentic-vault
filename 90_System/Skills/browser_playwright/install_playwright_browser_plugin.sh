@@ -38,8 +38,7 @@ PLUGIN_JSON_CONTENT=$(cat <<'EOF'
   "version": "0.1.0",
   "description": "General-purpose Playwright browser automation plugin for Codex with persistent browser sessions, DOM inspection, screenshots, and network response capture.",
   "author": {
-    "name": "Jan Papousek",
-    "email": "jan.papousek@weareflo.com",
+    "name": "Local workspace",
     "url": "https://playwright.dev/"
   },
   "homepage": "https://playwright.dev/docs/intro",
@@ -58,7 +57,7 @@ PLUGIN_JSON_CONTENT=$(cat <<'EOF'
     "displayName": "Playwright Browser",
     "shortDescription": "Use a real browser session for reading and controlled interaction on the web.",
     "longDescription": "Open real Chromium browser sessions from Codex, navigate pages, inspect DOM, take screenshots, capture network responses, and run controlled interactive web tasks via Playwright.",
-    "developerName": "Jan Papousek",
+    "developerName": "Local workspace",
     "category": "Productivity",
     "capabilities": [
       "Interactive",

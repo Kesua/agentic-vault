@@ -342,15 +342,17 @@ def _telegram_request(
     return parsed.get("result")
 
 
-def send_message(config: BridgeConfig, chat_id: int, text: str) -> None:
-    _telegram_request(
-        config,
-        "sendMessage",
-        {
-            "chat_id": str(chat_id),
-            "text": text[:4000],  # type: ignore
-        },
-    )
+def send_message(
+    config: BridgeConfig,
+    chat_id: int,
+    text: str,
+    *,
+    parse_mode: str | None = None,
+) -> Any:
+    payload = {"chat_id": str(chat_id), "text": text[:4000]}
+    if parse_mode is not None:
+        payload["parse_mode"] = parse_mode
+    return _telegram_request(config, "sendMessage", payload)
 
 
 def get_updates(config: BridgeConfig, offset: int | None) -> list[dict[str, Any]]:
@@ -453,9 +455,9 @@ def _build_codex_prompt(
 ) -> str:
     local_now = _now_local()
     lines = [
-        "You are running inside a Telegram bridge for ChiefOfStuffVault.",
+        "You are running inside a Telegram bridge for this vault.",
         "The final answer will be sent directly to Telegram.",
-        "Use concise Czech unless the user clearly asked for another language.",
+        "Reply concisely in the user's language.",
         "Use absolute dates.",
         "If you cannot complete the requested work safely in this bridge run, create a deferred task in 90_System/TaskQueue/pending/ and tell the user it was queued.",
         "Use 90_System/Skills/deferred_task_queue/task_queue.py or the canonical task template for deferred work.",
@@ -803,7 +805,7 @@ def run_loop(config: BridgeConfig) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Telegram -> Codex CLI bridge for ChiefOfStuffVault."
+        description="Telegram -> Codex CLI bridge for this vault."
     )
     parser.add_argument("--config", help="Path to local env-style config file")
     args = parser.parse_args(argv)

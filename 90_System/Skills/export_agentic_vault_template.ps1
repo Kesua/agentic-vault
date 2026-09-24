@@ -1,5 +1,8 @@
 param(
-    [string]$Destination = "C:\Users\jan.papousek\Coding\agentic-vault"
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNullOrEmpty()]
+    [string]$Destination,
+    [switch]$PreserveExisting = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +25,77 @@ function Write-Utf8File {
     if ($parent) {
         Ensure-Directory -Path $parent
     }
+    if ($PreserveExisting -and (Test-Path -LiteralPath $Path)) {
+        return
+    }
+    if (Test-CredentialText -Content $Content) {
+        Write-Warning "Skipped content containing a credential: $Path"
+        return
+    }
     Set-Content -LiteralPath $Path -Value $Content -Encoding utf8
+}
+
+function Test-ExcludedExportPath {
+    param([string]$RelativePath)
+
+    $normalized = $RelativePath.Replace('/', '\').TrimStart('\')
+    $segments = $normalized -split '\\'
+    foreach ($segment in $segments) {
+        if (@('secrets', 'runtime', 'logs', '__pycache__', '.venv') -contains $segment.ToLowerInvariant()) {
+            return $true
+        }
+    }
+
+    $fileName = $segments[-1].ToLowerInvariant()
+    if ($fileName -match '^\.env($|[._-])|(^|[._-])(credential|credentials|token|tokens|secret|secrets|password|oauth_client|private_key)([._-]|$)|^app_info\.txt$|^id_rsa($|\.)|\.(pem|key|p12|pfx|jks)$') {
+        return $true
+    }
+    if ($normalized -ieq '90_System\Integrations\slack\workspaces.json') {
+        return $true
+    }
+    $ownerSpecificPrefixes = @(
+        '.agents\skills\adhoc_client_meeting_summary\',
+        '.agents\skills\adhoc_dph_invoicing\',
+        '.agents\skills\adhoc_smartscout_db\',
+        '.agents\skills\investment_',
+        '.claude\skills\adhoc-client-meeting-summary\',
+        '.claude\skills\adhoc-dph-invoicing\',
+        '.claude\skills\adhoc-smartscout-db\',
+        '.claude\skills\investment-',
+        '90_System\Skills\dph_invoicing\',
+        '90_System\Skills\smartscout_db\',
+        '90_System\Skills\investment_funnel\',
+        '90_System\Skills\claude_code_mirror\'
+    )
+    foreach ($prefix in $ownerSpecificPrefixes) {
+        if ($normalized.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $true
+        }
+    }
+    if ($normalized -like '90_System\Skills\meeting_attendees_people_sync\people_enrich*' -or
+        $normalized -ieq '90_System\Skills\meeting_attendees_people_sync\SKILL.md' -or
+        $normalized -ieq '90_System\Skills\meeting_attendees_people_sync\tests\test_people_enrich.py') {
+        return $true
+    }
+    return $false
+}
+
+function Test-CredentialText {
+    param([string]$Content)
+
+    $pattern = '(?i)(?<![A-Za-z0-9.])xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|TELEGRAM_BOT_TOKEN=[0-9]{8,}:[A-Za-z0-9_-]{20,}|"(?:client_secret|access_token|refresh_token|api_key|bot_token)"\s*:\s*"(?!<|example|replace|your)[A-Za-z0-9._:-]{20,}"'
+    return [regex]::IsMatch($Content, $pattern)
+}
+
+function Test-ContainsCredential {
+    param([string]$Path)
+
+    $extension = [System.IO.Path]::GetExtension($Path).ToLowerInvariant()
+    if (@('.md', '.txt', '.json', '.yaml', '.yml', '.toml', '.py', '.ps1', '.sh') -notcontains $extension) {
+        return $false
+    }
+
+    return Test-CredentialText -Content (Get-Content -LiteralPath $Path -Raw)
 }
 
 function Copy-FileRelative {
@@ -32,6 +105,13 @@ function Copy-FileRelative {
     )
     $src = Join-Path $sourceRoot $RelativeSource
     $dst = Join-Path $Destination $RelativeDestination
+    if ((Test-ExcludedExportPath -RelativePath $RelativeSource) -or (Test-ExcludedExportPath -RelativePath $RelativeDestination) -or (Test-ContainsCredential -Path $src)) {
+        Write-Warning "Skipped excluded path: $RelativeSource"
+        return
+    }
+    if ($PreserveExisting -and (Test-Path -LiteralPath $dst)) {
+        return
+    }
     Ensure-Directory -Path (Split-Path -Parent $dst)
     Copy-Item -LiteralPath $src -Destination $dst -Force
 }
@@ -40,29 +120,29 @@ function Copy-TreeFiltered {
     param(
         [string]$RelativeSource,
         [string]$RelativeDestination,
-        [string[]]$AllowedExtensions = @(),
-        [string[]]$ExcludedSegments = @("__pycache__", "\runtime\", "\secrets\", "\Logs\")
+        [string[]]$AllowedExtensions = @()
     )
     $srcRoot = Join-Path $sourceRoot $RelativeSource
     $dstRoot = Join-Path $Destination $RelativeDestination
     Ensure-Directory -Path $dstRoot
 
     Get-ChildItem -LiteralPath $srcRoot -Recurse -File | ForEach-Object {
-        $fullName = $_.FullName
-        foreach ($segment in $ExcludedSegments) {
-            if ($fullName -like "*$segment*") {
-                return
-            }
-        }
-
         if ($AllowedExtensions.Count -gt 0 -and ($AllowedExtensions -notcontains $_.Extension.ToLowerInvariant())) {
             return
         }
 
-        $relativePath = $fullName.Substring($srcRoot.Length).TrimStart('\')
+        $relativePath = $_.FullName.Substring($srcRoot.Length).TrimStart('\')
+        $sourceRelativePath = Join-Path $RelativeSource $relativePath
+        if ((Test-ExcludedExportPath -RelativePath $sourceRelativePath) -or (Test-ContainsCredential -Path $_.FullName)) {
+            Write-Warning "Skipped excluded path: $sourceRelativePath"
+            return
+        }
         $destinationPath = Join-Path $dstRoot $relativePath
+        if ($PreserveExisting -and (Test-Path -LiteralPath $destinationPath)) {
+            return
+        }
         Ensure-Directory -Path (Split-Path -Parent $destinationPath)
-        Copy-Item -LiteralPath $fullName -Destination $destinationPath -Force
+        Copy-Item -LiteralPath $_.FullName -Destination $destinationPath -Force
     }
 }
 
@@ -75,18 +155,42 @@ Copy-TreeFiltered -RelativeSource ".claude\skills" -RelativeDestination ".claude
 Copy-TreeFiltered -RelativeSource "90_System\Skills" -RelativeDestination "90_System\Skills" -AllowedExtensions @(".md", ".py", ".ps1")
 Copy-TreeFiltered -RelativeSource "90_System\Integrations\Documentation" -RelativeDestination "90_System\Integrations\Documentation" -AllowedExtensions @(".md")
 
+$peopleSyncSkill = @'
+---
+name: "regular_people_sync"
+description: "Create or update people notes from meetings and stored replied-thread participants."
+---
+
+# People sync
+
+## What it does
+- Finds attendees in meeting notes and participants in stored email threads.
+- Creates or refreshes basic identity fields in `40_People/` and updates the people index.
+- Leaves role, organization, team, and working style for manual review.
+
+## Run
+- Sync: `.\.venv\Scripts\python.exe 90_System\Skills\meeting_attendees_people_sync\attendee_people_sync.py sync`
+- Dry run: `.\.venv\Scripts\python.exe 90_System\Skills\meeting_attendees_people_sync\attendee_people_sync.py sync --dry-run`
+- Refresh layout: `.\.venv\Scripts\python.exe 90_System\Skills\meeting_attendees_people_sync\attendee_people_sync.py refresh-layout`
+'@
+Write-Utf8File -Path (Join-Path $Destination "90_System\Skills\meeting_attendees_people_sync\SKILL.md") -Content $peopleSyncSkill
+
 Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\README.md"
 Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\run_telegram_bridge.ps1"
 Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\start_telegram_bridge.ps1"
 Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\stop_telegram_bridge.ps1"
 Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\telegram_bridge.py"
-Copy-FileRelative -RelativeSource "90_System\Integrations\slack\app_info.txt"
+Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\send_telegram_notification.py"
+Copy-FileRelative -RelativeSource "90_System\Integrations\telegram_bridge\tests\test_send_telegram_notification.py"
 Copy-FileRelative -RelativeSource "90_System\Integrations\slack\app_manifest.readonly.yaml"
 Copy-FileRelative -RelativeSource "90_System\Integrations\slack\app_manifest.writefuture.yaml"
+Copy-FileRelative -RelativeSource "90_System\Integrations\slack\workspaces.example.json"
 Copy-FileRelative -RelativeSource "90_System\TaskQueue\README.md"
 Copy-FileRelative -RelativeSource "90_System\TaskQueue\Templates\Task_TEMPLATE.md"
 Copy-FileRelative -RelativeSource ".gitignore"
-Copy-FileRelative -RelativeSource "requirements.txt"
+$requirements = Get-Content -LiteralPath (Join-Path $sourceRoot "requirements.txt") |
+    Where-Object { $_.Trim() -notmatch '^pyodbc(?:[<=>!~].*)?$' }
+Write-Utf8File -Path (Join-Path $Destination "requirements.txt") -Content ($requirements -join [Environment]::NewLine)
 Copy-FileRelative -RelativeSource "00_Mailbox\Templates\EmailSummary_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "00_Mailbox\Templates\EmailThread_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "00_Mailbox\Templates\SlackSummary_TEMPLATE.md"
@@ -95,6 +199,8 @@ Copy-FileRelative -RelativeSource "20_Meetings\Templates\MeetingNote_TEMPLATE.md
 Copy-FileRelative -RelativeSource "30_Projects\Templates\ProjectSnapshot_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "40_People\Templates\person_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "50_Areas\Area_TEMPLATE.md"
+Copy-FileRelative -RelativeSource "80_Workblocks\README.md"
+Copy-FileRelative -RelativeSource "80_Workblocks\_Template.md"
 Copy-FileRelative -RelativeSource "60_SOPs\Templates\DailyBrief_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "60_SOPs\Templates\EmailThread_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "60_SOPs\Templates\WeeklyReview_TEMPLATE.md"
@@ -112,6 +218,7 @@ Copy-FileRelative -RelativeSource ".codex\rules\vault.rules"
     "40_People",
     "50_Areas",
     "70_Exports",
+    "80_Workblocks",
     "_attachments"
 ) | ForEach-Object {
     Ensure-Directory -Path (Join-Path $Destination $_)
@@ -174,6 +281,7 @@ Scope: everything in this repository.
 - Projects live under `30_Projects/<ProjectFolder>/`. Snapshots use `30_Projects/Templates/ProjectSnapshot_TEMPLATE.md`.
 - People live under `40_People/`. Each person record uses `40_People/Templates/person_TEMPLATE.md`.
 - Areas live under `50_Areas/`.
+- Workblocks live under `80_Workblocks/` and provide short-lived session handoff state; they are not authoritative project documentation.
 
 ## Non-negotiables
 - ABSOLUTELY NEVER USE AVAILABLE TOKENS TO CUSTOM INTERACTION WITH EXTERNAL SERVICES. EXTERNAL SERVICES CAN ONLY BE QUERIED BY DEDICATED SKILLS.
@@ -192,12 +300,22 @@ Scope: everything in this repository.
 - Projects: keep a stable project note name; snapshots use `... - Snapshot` if needed
 - People: `40_People/Person Name.md`
 - Areas: `50_Areas/Area Name/`
+- Workblocks: `80_Workblocks/<Scope> - <Intent>.md`; keep the Windows-safe filename at most 120 characters and add a short source-session ID only to resolve a collision.
 
 ## When adding new content
 - If the change affects a project, also update `30_Projects/_Projects.md`.
 - If the change creates a meeting note, add it to `20_Meetings/_MeetingIndex.md`.
 - If the change adds people context, update `40_People/` and `40_People/_PeopleIndex.md`.
 - If the change adds or updates an area, reflect it in `50_Areas/_Areas.md`.
+
+## Workblock protocol
+- At the start of every session, use `90_System/Skills/workblocks/workblocks.py list --statuses active,blocked --query "<current topic>"` to find relevant workblocks before planning or editing; create a new workblock only when the work has a real continuation beyond the current session.
+- Load at most one unambiguous relevant workblock. If multiple candidates remain relevant, do not guess: ask the user to select one. Verify its current state against the referenced vault files before relying on it.
+- Treat `80_Workblocks/` as operational handoff memory, not authoritative project documentation. Keep one stable file per continuing intent and store dates only in YAML frontmatter.
+- Use only `active`, `blocked`, or `completed` for `status`; use a project/area wikilink or `general` for `scope`; record source session IDs in the body and never copy raw transcripts into a workblock.
+- Before the final answer, update the workblock used in the session with verified facts only: goal, current state, next action, blocker or decision, key files, and source session IDs. Preserve a newer live state when adding historical context.
+- Change a workblock to `completed` only when its objective done condition is demonstrably satisfied or the user confirms completion. Uncertain historical state defaults to `completed`; use `blocked` only for an explicit unresolved blocker.
+- End every final response with exactly one receipt: `Workblock: updated <path>`, `Workblock: read, unchanged <path>`, or `Workblock: not needed — one-off task`.
 
 ## Skill routing
 - Skills are available in `.agents/skills/`.
@@ -270,6 +388,11 @@ This file is generated or maintained from the repo-local guidance. Treat `AGENTS
 - Keep external-service access inside dedicated skills.
 - Do not delete, move, or rename files unless explicitly asked.
 - For outside-vault file edits, work on exported copies under `70_Exports/YYYY/MM/DD/`.
+
+## Workblock protocol
+- At session start, search `80_Workblocks/` for relevant `active` or `blocked` workblocks, load at most one unambiguous result, and verify it against current files.
+- Create or update a workblock only for continuing work. Use verified facts, keep source session IDs instead of transcripts, and mark `completed` only when the done condition is proven or confirmed.
+- End every final response with exactly one receipt: `Workblock: updated <path>`, `Workblock: read, unchanged <path>`, or `Workblock: not needed — one-off task`.
 '@
 
 $skills = @'
@@ -422,6 +545,7 @@ $claudeSettings = @'
 $agentPrompts = Get-Content -Raw -LiteralPath (Join-Path $sourceRoot "AgentPrompts.md")
 $startHere = Get-Content -Raw -LiteralPath (Join-Path $sourceRoot "60_SOPs\StartHere.md")
 $howIWork = Get-Content -Raw -LiteralPath (Join-Path $sourceRoot "60_SOPs\_HowIWork.md")
+$howIWork = $howIWork -replace '1\. Work \(FLO\)', '1. Work'
 $agentGuide = Get-Content -Raw -LiteralPath (Join-Path $sourceRoot "60_SOPs\_AgentGuide.md")
 $mailbox = Get-Content -Raw -LiteralPath (Join-Path $sourceRoot "00_Mailbox\_Mailbox.md")
 

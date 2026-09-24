@@ -381,7 +381,7 @@ def command_claim_next(args: argparse.Namespace) -> int:
 def command_render_prompt(args: argparse.Namespace) -> int:
     task = _find_task(args.task)
     prompt_lines = [
-        "You are processing a deferred task from ChiefOfStuffVault.",
+        "You are processing a deferred task from this vault.",
         "Finish the requested work if it is still valid and safe.",
         "When done, summarize the outcome so the queue record can be updated.",
         "Use absolute dates in any user-facing text.",

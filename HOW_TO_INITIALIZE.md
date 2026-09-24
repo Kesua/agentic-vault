@@ -6,6 +6,7 @@ Goal:
 - get the vault open
 - put every secret in the right place
 - connect the outside services this vault knows how to use
+- schedule the skills you want to keep your notes current
 - avoid putting passwords or tokens into the wrong files
 
 ## What a skill is
@@ -119,6 +120,11 @@ The script installs Python if needed, creates the virtual environment, installs
 dependencies, and opens a browser-based wizard that walks you through connecting
 each service.
 
+The wizard can run one initial import. **That import runs once.** To keep notes
+current, schedule a connected `regular_*` skill as a recurring task in Codex,
+Claude Code, or another assistant that supports routines. The wizard does not
+create a schedule for you.
+
 It also checks whether Claude Code, OpenAI Codex, Gemini CLI, or OpenCode is
 already installed on Windows or macOS. If none is available, the wizard lets you
 choose which coding assistant to install. The wizard can also:
@@ -154,8 +160,8 @@ If someone technical is helping you, they should then open PowerShell in this fo
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\pip.exe install uv
-.\.venv\Scripts\uv.exe sync
+.\.venv\Scripts\python.exe -m pip install uv
+.\.venv\Scripts\uv.exe sync --locked
 ```
 
 ## Step 2: Open the vault
@@ -229,6 +235,7 @@ The easiest setup is:
 2. Turn on both:
    - Google Calendar API
    - Gmail API
+   - Google Drive, Docs, Sheets, and Slides APIs if you want editing skills
 3. Create one Desktop App OAuth client.
 4. Download the JSON file once.
 5. Save a copy of that same file in this vault under the names this repo expects.
@@ -397,19 +404,19 @@ Based on Google's official API quickstart documentation:
 
 Simplest choice:
 
-- save a copy as `90_System/secrets/google_drive_oauth_client.json`
+- save a copy as `90_System/secrets/gdrive_oauth_client.json`
 
 If you want separate files per account, use:
 
-- `90_System/secrets/google_drive_oauth_client_private.json`
-- `90_System/secrets/google_drive_oauth_client_personal.json`
+- `90_System/secrets/gdrive_oauth_client_private.json`
+- `90_System/secrets/gdrive_oauth_client_personal.json`
 
 ### What happens next
 
 When you sign in for the first time, the vault will create:
 
-- `90_System/secrets/google_drive_token_private.json`
-- `90_System/secrets/google_drive_token_personal.json`
+- `90_System/secrets/gdrive_token_private.json`
+- `90_System/secrets/gdrive_token_personal.json`
 
 ### First sign-in
 
@@ -518,146 +525,16 @@ There are a few optional Fireflies preferences using environment variables, but 
 
 ## Slack setup
 
-Used by:
+The vault reads Slack with a **User OAuth Token**. It discovers conversations visible to that user. The regular routine includes direct and group messages; add conversation IDs to the exclusion list when they must stay out of the vault.
 
-- `90_System/Skills/slack_assistant/`
-- `90_System/Skills/process_slack/`
+1. Create and install a Slack app from `90_System/Integrations/slack/app_manifest.readonly.yaml`. A workspace administrator may need to approve its user read scopes.
+2. Copy the **User OAuth Token** into `90_System/secrets/slack_user_token_private.txt`. Keep it out of notes and Git.
+3. Copy `90_System/Integrations/slack/workspaces.example.json` to the ignored `90_System/Integrations/slack/workspaces.json` and fill in the workspace ID and your own Slack user ID. Leave `exclude_conversation_ids` empty to include all visible conversations, or list IDs to skip.
+4. Run `slack_assistant.py auth-check --workspace private`, then `process_slack.py sync --workspace private --dry-run --include-dm --include-mpim` before the first real sync.
 
-What it gives you:
-
-- read selected Slack channels and DMs
-- summarize threads
-- export Slack activity into the vault
-
-### Important note
-
-Slack setup is the most fiddly one.
-
-If you do not truly need Slack inside the vault, skip it at first.
-
-### What you need
-
-- a Slack app created from the repo manifest
-- a bot token from that app
-- a local config file telling the vault which workspace and channels are allowed
-
-### Step A: create the Slack app
-
-The repo already includes a Slack app manifest:
-
-- `90_System/Integrations/slack/app_manifest.readonly.yaml`
-
-Based on Slack’s official app setup and OAuth docs:
-
-1. Open the Slack app management page.
-2. Choose `Create New App`.
-3. Choose `From an app manifest`.
-4. Pick your workspace.
-5. Paste the YAML from `app_manifest.readonly.yaml`.
-6. Create the app.
-7. Install the app to the workspace.
-8. Approve the requested permissions.
-
-### Step B: get the token
-
-After install, Slack will show a `Bot User OAuth Token`.
-
-Copy that token.
-
-### Step C: save the token in the correct file
-
-Create a file like this:
-
-- `90_System/secrets/slack_token_private.txt`
-
-Put only the token inside.
-
-If you also connect another workspace, use another file, for example:
-
-- `90_System/secrets/slack_token_personal.txt`
-
-### Step D: create the workspace config
-
-Create this file:
-
-- `90_System/Integrations/slack/workspaces.json`
-
-This repository’s docs mention an example file, but it is not present here, so you should create the real file directly.
-
-Use this starter template:
-
-```json
-{
-  "workspaces": [
-    {
-      "alias": "private",
-      "team_id": "PUT_YOUR_SLACK_WORKSPACE_ID_HERE",
-      "token_file": "90_System/secrets/slack_token_private.txt",
-      "jan_user_ids": [
-        "PUT_YOUR_OWN_SLACK_USER_ID_HERE"
-      ],
-      "download": {
-        "enabled": false,
-        "max_bytes": 26214400,
-        "allowed_extensions": [
-          ".csv",
-          ".docx",
-          ".jpg",
-          ".md",
-          ".pdf",
-          ".png",
-          ".pptx",
-          ".txt",
-          ".xlsx"
-        ]
-      },
-      "allow_conversations": [
-        {
-          "id": "PUT_CHANNEL_OR_DM_ID_HERE",
-          "name": "friendly-name",
-          "type": "public_channel",
-          "retention_class": "work",
-          "allow_file_download": false
-        }
-      ]
-    }
-  ]
-}
-```
-
-### What the confusing Slack IDs mean
-
-- `team_id`
-  - the ID of the whole Slack workspace
-- `jan_user_ids`
-  - your own Slack user ID, so the vault can tell whether something is waiting for your reply
-- `allow_conversations`
-  - the exact channels or DMs the vault is allowed to read
-
-### The safe way to start
-
-Start small:
-
-- one workspace
-- one or two channels
-- file download turned off
-
-### Admin warning
-
-In company Slack workspaces, an admin may need to approve the app.
-
-### One more caution
-
-Do not save Slack tokens in:
-
-- `workspaces.json`
-- markdown notes
-- screenshots
-
-Only save them in the secret text file.
+The setup wizard performs steps 2 and 3 after the app is installed. It can list conversations so you can mark exclusions. A previous bot-token `token_file` / `allow_conversations` config must be replaced for user-token reads. See `90_System/Integrations/Documentation/slack_setup.md` for the full commands and data boundaries.
 
 ---
-
 ## Clockify setup
 
 Used by:
@@ -717,7 +594,7 @@ Used by:
 What it gives you:
 
 - send a text message to a Telegram bot
-- have that bot ask Codex to work inside this vault
+- have that bot ask your configured coding assistant to work inside this vault
 
 ### You can skip this
 
@@ -760,7 +637,7 @@ TELEGRAM_ALLOWED_CHAT_IDS=PUT_YOUR_TELEGRAM_CHAT_ID_HERE
 Optional extra lines if you need them:
 
 ```env
-CODEX_COMMAND=codex
+AGENT_COMMAND=codex
 BRIDGE_ACCEPT_PLAIN_TEXT=true
 ```
 
@@ -839,15 +716,15 @@ When you are done, your `90_System/secrets/` folder may contain some or all of t
 - `gmail_oauth_client_personal.json`
 - `gmail_token_private.json`
 - `gmail_token_personal.json`
-- `google_drive_oauth_client.json`
-- `google_drive_oauth_client_private.json`
-- `google_drive_oauth_client_personal.json`
-- `google_drive_token_private.json`
-- `google_drive_token_personal.json`
+- `gdrive_oauth_client.json`
+- `gdrive_oauth_client_private.json`
+- `gdrive_oauth_client_personal.json`
+- `gdrive_token_private.json`
+- `gdrive_token_personal.json`
 - `todoist_token_personal.json`
 - `fireflies_api_key.txt`
-- `slack_token_private.txt`
-- `slack_token_personal.txt`
+- `slack_user_token_private.txt`
+- `slack_user_token_personal.txt`
 - `clockify_token.txt`
 - `telegram_bridge.env`
 
@@ -891,7 +768,7 @@ If you prefer to set this up by hand:
 
 ### Security note
 
-Your local model runs entirely offline. No data is sent to any cloud service.
+After a model is downloaded, local inference can run without sending prompts to a cloud model. Downloading a model and any other connected vault skills still use the network.
 
 ---
 
@@ -914,6 +791,26 @@ Later, add:
 8. Clockify
 9. Local AI (if you want to run models offline)
 10. Telegram bridge
+
+---
+
+## Make notes update automatically
+
+1. Connect the service in the wizard. Run its optional initial load to create the first notes.
+2. Ask your coding assistant to run the matching `regular_*` skill once in this vault. Check the notes it created.
+3. In an assistant that supports recurring tasks, schedule that same skill at a time you choose. If it does not support recurring tasks, use a scheduler that starts the assistant in this vault.
+
+| Connected service | Skill to schedule | Result |
+|---|---|---|
+| Google Calendar | `regular_gcal_today` | Upcoming meetings appear under `20_Meetings/`. |
+| Gmail | `regular_process_emails` | Important email context appears under `00_Mailbox/`. |
+| Todoist | `regular_daily_brief_todoist` | Tasks refresh in upcoming daily briefs. |
+| Slack | `regular_process_slack` | Visible conversations appear under `00_Mailbox/`. |
+| Fireflies | `regular_fireflies_sync` | Transcript summaries attach to meeting notes. |
+
+Example request in your assistant: “In this vault, schedule the repo-local `regular_gcal_today` skill every weekday at 08:00 in my local timezone. Run it once now, and tell me if a run fails.” Change the skill and time to match what you connected. The `regular_day_start` and `regular_day_end` wrappers run several skills; use them only after connecting the services listed in their skill files.
+
+**The wizard does not create a recurring task.** If you do not schedule a skill, use it on demand; notes will not keep syncing in the background.
 
 ---
 

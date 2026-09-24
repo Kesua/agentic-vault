@@ -1,6 +1,20 @@
 # Agentic Vault
 
-A reusable, Obsidian-friendly vault skeleton for a personal operating system — with repo-local agent skills, an automated setup wizard, and optional local AI integration.
+**Your notes update themselves when you schedule the right skill.** Connect an account in the setup wizard, then schedule a repo-local `regular_*` skill as a recurring task in Codex, Claude Code, or another assistant that supports routines. For example, `regular_gcal_today` turns upcoming calendar events into meeting notes; `regular_process_emails` adds useful email context to the mailbox; `regular_daily_brief_todoist` refreshes tasks in daily briefs.
+
+Agentic Vault is an Obsidian-friendly personal workspace with local skills, note templates, and a setup wizard. The wizard connects accounts and can run a first import. **It does not schedule future runs**; you choose which skills run, when, and in which assistant.
+
+## Keep the vault current
+
+| Schedule this skill | What changes in the vault |
+|---|---|
+| `regular_gcal_today` | Upcoming calendar events become meeting notes. |
+| `regular_process_emails` | Important emails and replied threads appear in `00_Mailbox/`. |
+| `regular_daily_brief_todoist` | Todoist tasks appear in upcoming daily briefs. |
+| `regular_process_slack` | Visible Slack conversations become summaries and thread snapshots in `00_Mailbox/`. |
+| `regular_fireflies_sync` | Transcript summaries are added to matching meeting notes. |
+
+Start with one connected service. In your assistant's recurring task feature, ask it to run that skill from this vault each weekday. The `regular_day_start` and `regular_day_end` wrappers combine several skills once you have connected the services they use. If your assistant has no recurring task feature, use a scheduler that launches the assistant in this vault. See [HOW_TO_INITIALIZE.md](HOW_TO_INITIALIZE.md) for the setup and routine checklist.
 
 ## What's included
 
@@ -23,9 +37,9 @@ A reusable, Obsidian-friendly vault skeleton for a personal operating system —
 
 ## Prerequisites
 
-- **Python 3.9+** — the setup wizard auto-installs via `winget` on Windows or Homebrew on macOS if missing
+- **Python 3.9+** — the setup script can install it via `winget` on Windows or Homebrew on macOS if missing
 - **Obsidian** (recommended) — open the vault root as a vault; no plugins required for core functionality
-- **A coding assistant** — one of: Claude Code, OpenAI Codex, Gemini CLI, or OpenCode (the wizard can install any of them)
+- **A coding assistant** — one of: Claude Code, OpenAI Codex, Gemini CLI, or OpenCode (the wizard can install one on Windows or macOS)
 
 ## Installation
 
@@ -35,10 +49,6 @@ A reusable, Obsidian-friendly vault skeleton for a personal operating system —
 2. Double-click **`Setup_Windows.bat`**.
 3. The wizard opens automatically in your browser — follow the on-screen steps.
 4. Press `Ctrl+C` in the terminal when you are done.
-
-> If PowerShell blocks the script, run once in PowerShell:
-> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
-> Then double-click `Setup_Windows.bat` again.
 
 ### macOS / Linux
 
@@ -62,7 +72,7 @@ A reusable, Obsidian-friendly vault skeleton for a personal operating system —
 | Todoist | Saves your personal API token for task sync |
 | Fireflies | Saves your API key for transcript sync |
 | Clockify | Saves your API key for time tracking |
-| Slack | Bot token and workspace config for approved channels |
+| Slack | User OAuth Token and workspace exclusions for user-visible conversations |
 | Telegram | Bot token and allowed user/chat IDs for vault messaging |
 | Local AI | Optional LM Studio or Ollama install with model selection and OpenCode integration |
 | Playwright | Optional Chromium-based browser automation tooling |
@@ -76,7 +86,8 @@ A reusable, Obsidian-friendly vault skeleton for a personal operating system —
    - `MEMORY.md` — persistent lessons and preferences (read by the agent every session)
    - `60_SOPs/_HowIWork.md` — your personal working style
 3. Adjust `.codex/config.toml` if you want this vault to reference additional external repos.
-4. Start a Claude Code (or your chosen assistant) session in the vault root — the agent reads `AGENTS.md`, `SOUL.md`, and `MEMORY.md` automatically at the start of each session.
+4. Start Codex, Claude Code, or your chosen assistant in the vault root and ask it to run one connected `regular_*` skill once.
+5. Schedule that skill as a recurring task in your assistant or a scheduler that starts the assistant in this vault. The initial wizard import is a one-time run.
 
 ## Folder structure
 
@@ -128,7 +139,7 @@ Skills live in `90_System/Skills/`. Each skill is a focused automation with one 
 
 | Skill | What it does |
 |-------|-------------|
-| `slack_assistant` | Reads approved Slack channels and DMs, summarizes threads |
+| `slack_assistant` | Reads user-visible Slack channels and DMs, summarizes threads |
 | `process_slack` | Exports Slack summaries and thread snapshots into `00_Mailbox/` |
 
 **Vault maintenance**

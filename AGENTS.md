@@ -18,6 +18,7 @@ Scope: everything in this repository.
 - Projects live under `30_Projects/<ProjectFolder>/`. Snapshots use `30_Projects/Templates/ProjectSnapshot_TEMPLATE.md`.
 - People live under `40_People/`. Each person record uses `40_People/Templates/person_TEMPLATE.md`.
 - Areas live under `50_Areas/`.
+- Workblocks live under `80_Workblocks/` and carry short-lived task handoff state.
 
 ## Non-negotiables
 - ABSOLUTELY NEVER USE AVAILABLE TOKENS TO CUSTOM INTERACTION WITH EXTERNAL SERVICES. EXTERNAL SERVICES CAN ONLY BE QUERIED BY DEDICATED SKILLS.
@@ -36,6 +37,7 @@ Scope: everything in this repository.
 - Projects: keep a stable project note name; snapshots use `... - Snapshot` if needed
 - People: `40_People/Person Name.md`
 - Areas: `50_Areas/Area Name/`
+- Workblocks: `80_Workblocks/<Scope> - <Intent>.md`
 
 ## When adding new content
 - If the change affects a project, also update `30_Projects/_Projects.md`.
@@ -54,6 +56,13 @@ Scope: everything in this repository.
 ## Agent deliverables
 - Prefer actionable checklists at the end of outputs.
 - If something is ambiguous, ask 1 to 3 concrete questions.
+
+## Workblock protocol
+- At session start, use `90_System/Skills/workblocks/workblocks.py list --statuses active,blocked --query "<current topic>"` to look for continuing work.
+- Load at most one clearly relevant workblock and verify its state against the referenced vault files.
+- Create a workblock only for work with a real continuation beyond the current session.
+- Before the final answer, update the workblock used with verified current state, next action, blockers, and key files.
+- End each final response with exactly one workblock receipt: `Workblock: updated <path>`, `Workblock: read, unchanged <path>`, or `Workblock: not needed — one-off task`.
 
 ## Deferred task queue
 - Deferred queue root: `90_System/TaskQueue/`

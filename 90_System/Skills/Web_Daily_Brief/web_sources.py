@@ -1071,7 +1071,7 @@ def main(argv: list[str] | None = None) -> int:
     p_fetch.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
     p_fetch.add_argument(
         "--user-agent",
-        default="ChiefOfStuffVault-WebDailyBrief/1.0",
+        default="AgenticVault-WebDailyBrief/1.0",
         help="User-Agent for HTTP calls (some endpoints may block default urllib UA).",
     )
     p_fetch.add_argument(

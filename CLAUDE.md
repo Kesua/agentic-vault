@@ -18,3 +18,6 @@ This file is generated or maintained from the repo-local guidance. Treat `AGENTS
 ## Repo-local Google skills
 - Use `adhoc_google_drive` for Drive file discovery and exports.
 - Use `gdocs`, `gsheets`, and `gslides` for repo-local Google document operations through the shared runtime.
+
+## Workblocks
+- Follow the workblock protocol in `AGENTS.md` and use `90_System/Skills/workblocks/workblocks.py` for continuing tasks.

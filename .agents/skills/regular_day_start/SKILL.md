@@ -25,7 +25,7 @@ Run the vault’s morning automations in one go. This is best-effort: each step 
 - Process emails:
   - `.\.venv\Scripts\python.exe 90_System\Skills\process_emails\process_emails.py sync`
 - Process Slack:
-  - `.\.venv\Scripts\python.exe 90_System\Skills\process_slack\process_slack.py sync`
+  - `.\.venv\Scripts\python.exe 90_System\Skills\process_slack\process_slack.py sync --include-dm --include-mpim`
 - Daily News:
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_sources.py fetch --pretty > 70_Exports\sources.json`
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_daily_brief.py render --sources-file 70_Exports\sources.json --output-file 70_Exports\daily_news.md`
@@ -34,3 +34,4 @@ Run the vault’s morning automations in one go. This is best-effort: each step 
 ## Notes
 - Use this when the task is the routine morning prep flow.
 - If aliases changed later in the day, follow up with `regular_create_links`.
+- The Slack step includes direct and group messages visible to the token owner in addition to channels.

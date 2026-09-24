@@ -5,7 +5,7 @@ description: "Merged design foundation skill set: context gathering, design dire
 
 # Ad-hoc Design Foundation
 
-This file is a grouped copy of the source bundle from `C:\Users\jan.papousek\Downloads\impeccable-style-universal\.agents\skills`, focused on design context, direction, and structural thinking.
+This file groups design guidance for this vault, focused on design context, direction, and structural thinking.
 
 ## Vault Integration Notes
 - Follow this vault's `AGENTS.md`, `SOUL.md`, and `MEMORY.md` first.

@@ -86,12 +86,11 @@ Suggested user settings:
 
 ```json
 {
-  "additionalDirectories": [
-    "C:\\\\Users\\\\jan.papousek\\\\.codex\\\\memories",
-    "C:\\\\Users\\\\jan.papousek\\\\OneDrive\\\\Dokumenty\\\\Business\\\\Invoicing"
-  ]
+  "additionalDirectories": []
 }
 ```
+
+Add your own local directories only if your workspace needs them.
 
 ## References
 - Memory: https://code.claude.com/docs/en/memory
@@ -103,10 +102,7 @@ Suggested user settings:
 """
 
 CLAUDE_SETTINGS_LOCAL_EXAMPLE = """{
-  "additionalDirectories": [
-    "C:\\\\Users\\\\jan.papousek\\\\.codex\\\\memories",
-    "C:\\\\Users\\\\jan.papousek\\\\OneDrive\\\\Dokumenty\\\\Business\\\\Invoicing"
-  ]
+  "additionalDirectories": []
 }
 """
 
@@ -298,13 +294,14 @@ def build_claude_md() -> str:
     file_naming = extract_bullets(agents, "File naming")
     add_content = extract_bullets(agents, "When adding new content")
     deliverables = extract_bullets(agents, "Agent deliverables")
+    workblock_protocol = extract_bullets(agents, "Workblock protocol")
     preferences = extract_bullets(memory, "Preferences")
     learned_rules = extract_bullets(memory, "Learned Rules")
     useful_pointers = extract_bullets(memory, "Useful Pointers")
     known_pitfalls = extract_bullets(memory, "Known Pitfalls")
 
     sections = [
-        "# Claude Instructions (ChiefOfStuffVault)",
+        "# Claude Instructions (Agentic Vault)",
         "",
         "This file is generated from the repo-local Codex guidance. Treat the Codex docs as the source of truth and regenerate after changing them.",
         "",
@@ -369,6 +366,8 @@ def build_claude_md() -> str:
         ]
     )
     sections.extend(f"- {item}" for item in deliverables)
+    sections.extend(["", "## Workblock protocol"])
+    sections.extend(f"- {item}" for item in workblock_protocol)
     sections.extend(
         [
             "",
@@ -386,6 +385,7 @@ def build_claude_md() -> str:
             "- The mirrored skills are generated from `.agents/skills/**/SKILL.md` and call the existing `90_System/Skills/**` automation code.",
             "- Keep external-service access inside the dedicated wrappers. Do not improvise direct Gmail, Slack, Fireflies, Todoist, Google Calendar, or Clockify access.",
             "- If a task involves local document editing outside the vault, create or update only an exported copy under `70_Exports/YYYY/MM/DD/` and report both source and exported paths.",
+            "- Use `gdocs`, `gsheets`, and `gslides` for Google document editing through the shared runtime.",
         ]
     )
     return "\n".join(sections) + "\n"

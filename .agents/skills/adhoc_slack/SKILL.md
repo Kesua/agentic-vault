@@ -1,6 +1,6 @@
 ---
 name: "adhoc_slack"
-description: "Wrapper skill: read Slack safely, search approved conversations, summarize threads, and optionally export follow-up signals into the vault."
+description: "Wrapper skill: read user-visible Slack conversations, summarize threads, and optionally export follow-up signals into the vault."
 ---
 
 # Ad-hoc Slack
