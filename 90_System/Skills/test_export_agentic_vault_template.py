@@ -55,7 +55,7 @@ class AgenticVaultExportTests(unittest.TestCase):
             self.assertEqual("Curated setup wizard guide\n", readme.read_text(encoding="utf-8"))
             self.assertTrue((destination / "90_System/Skills/workblocks/workblocks.py").exists())
 
-    def test_export_omits_credentials_from_direct_and_recursive_copies(self) -> None:
+    def test_export_omits_credentials_and_private_project_journals(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "source"
             destination = Path(tmp) / "distribution"
@@ -111,6 +111,13 @@ class AgenticVaultExportTests(unittest.TestCase):
                 "xoxb-" + "123456789012-abcdefghijklmnopqrstuvwxyz\n", encoding="utf-8"
             )
 
+            private_journal = source / "30_Projects/Journal/Private Customer.md"
+            private_journal.parent.mkdir(parents=True, exist_ok=True)
+            private_journal.write_text("Confidential delivery agreement\n", encoding="utf-8")
+            (private_journal.parent / "_Journal.md").write_text(
+                "[[Private Customer]] — confidential status\n", encoding="utf-8"
+            )
+
             result = subprocess.run(
                 [
                     "powershell",
@@ -136,6 +143,15 @@ class AgenticVaultExportTests(unittest.TestCase):
             self.assertFalse((destination / ".claude/skills/demo/credential.txt").exists())
             self.assertFalse((destination / "90_System/Integrations/Documentation/notes.md").exists())
             self.assertFalse((destination / "60_SOPs/_AgentGuide.md").exists())
+            exported_journals = destination / "30_Projects/Journal"
+            self.assertTrue(exported_journals.is_dir())
+            self.assertEqual(["_Journal.md"], sorted(p.name for p in exported_journals.iterdir()))
+            self.assertNotIn("Private Customer", (exported_journals / "_Journal.md").read_text(encoding="utf-8-sig"))
+            self.assertTrue((destination / "30_Projects/Templates/ProjectJournal_TEMPLATE.md").is_file())
+            self.assertIn(
+                "[[30_Projects/Journal/_Journal",
+                (destination / "30_Projects/_Projects.md").read_text(encoding="utf-8-sig"),
+            )
 
     def test_export_contains_only_workblock_skeleton_and_helper(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

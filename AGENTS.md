@@ -9,6 +9,7 @@ Scope: everything in this repository.
 
 ## Session bootstrap
 - In every session, read `AGENTS.md`, `SOUL.md`, and `MEMORY.md` from the repo root.
+- For project context, find its journal in `30_Projects/Journal/`; read relevant open commitments and the latest two daily entries, then follow sources as needed. Do not load all journals or the full index.
 - Update `MEMORY.md` only when a new lesson is likely to save time or prevent a repeated mistake.
 
 ## Canonical paths for locally stored data
@@ -16,6 +17,7 @@ Scope: everything in this repository.
 - Daily briefs live under `10_DailyBriefs/YYYY/MM/`.
 - Meetings live under `20_Meetings/YYYY/MM/DD/`. Each meeting record uses `20_Meetings/Templates/MeetingNote_TEMPLATE.md`.
 - Projects live under `30_Projects/<ProjectFolder>/`. Snapshots use `30_Projects/Templates/ProjectSnapshot_TEMPLATE.md`.
+- Project journals live in `30_Projects/Journal/<Project>.md`; index `30_Projects/Journal/_Journal.md`. Keep one stable journal per project; use `30_Projects/Templates/ProjectJournal_TEMPLATE.md` for new journals.
 - People live under `40_People/`. Each person record uses `40_People/Templates/person_TEMPLATE.md`.
 - Areas live under `50_Areas/`.
 - Workblocks live under `80_Workblocks/` and carry short-lived task handoff state.
@@ -41,6 +43,7 @@ Scope: everything in this repository.
 
 ## When adding new content
 - If the change affects a project, also update `30_Projects/_Projects.md`.
+- Journal only new actionable changes: one bullet, one sentence, at most 25 words excluding one source link. Preserve history; do not repeat summaries, unchanged tasks or empty daily entries. Update journal/index status and actions only when they change.
 - If the change creates a meeting note, add it to `20_Meetings/_MeetingIndex.md`.
 - If the change adds people context, update `40_People/` and `40_People/_PeopleIndex.md`.
 - If the change adds or updates an area, reflect it in `50_Areas/_Areas.md`.
@@ -48,6 +51,7 @@ Scope: everything in this repository.
 ## Skill routing
 - Skills are available in `.agents/skills/`.
 - Use `regular_*` for deterministic maintenance flows.
+- Use `regular_project_journal` for scheduled incremental project journals or the owner's explicit request for the same update; follow its collection runbook. Installing it does not schedule future runs.
 - Use `bulk_*` for deterministic backfills.
 - Use `adhoc_*` for one-off external-system or local-file work.
 - Local browser automation is available through `adhoc_browser_playwright`, backed by `90_System/Skills/browser_playwright/`.

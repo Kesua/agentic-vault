@@ -814,6 +814,16 @@ Example request in your assistant: “In this vault, schedule the repo-local `re
 
 ---
 
+## Project journals (optional)
+
+Use `regular_project_journal` in Codex or `regular-project-journal` in Claude Code for scheduled or explicitly requested incremental project history. Start with `30_Projects/Journal/_Journal.md`; new journals use `30_Projects/Templates/ProjectJournal_TEMPLATE.md`.
+
+1. Choose the configured Gmail, Slack and Fireflies sources to cover, your timezone and the first date window to inspect. Missing services stay unavailable; the workflow does not need additional credentials.
+2. Ask the assistant to run the journal skill once for that window. Check its source links and the resulting commitments. No material change means no journal edit.
+3. If you want daily updates, schedule the assistant to run this skill at a time you choose, preferably after relevant exports. Installing the skill does not create a recurring task.
+
+Keep one stable file per project. Each entry records only a new commitment, decision, dependency or evidenced completion; repeated runs preserve history and avoid duplicates. Collection and retry details: `90_System/Skills/project_journal/RUNBOOK.md`.
+
 ## If something goes wrong
 
 Most connection problems come from one of these:

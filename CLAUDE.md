@@ -5,6 +5,9 @@ This file is generated or maintained from the repo-local guidance. Treat `AGENTS
 ## Startup
 - At the start of each session, read `AGENTS.md`, `SOUL.md`, and `MEMORY.md` from the repo root.
 
+## Project journals
+- Follow the journal context and writing rules in `AGENTS.md`. Use `regular-project-journal` for scheduled or explicitly requested incremental updates in `30_Projects/Journal/`.
+
 ## Behavioral defaults
 - Preserve the current structure and stay Obsidian-friendly.
 - Keep outputs concise and actionable.

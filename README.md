@@ -13,8 +13,11 @@ Agentic Vault is an Obsidian-friendly personal workspace with local skills, note
 | `regular_daily_brief_todoist` | Todoist tasks appear in upcoming daily briefs. |
 | `regular_process_slack` | Visible Slack conversations become summaries and thread snapshots in `00_Mailbox/`. |
 | `regular_fireflies_sync` | Transcript summaries are added to matching meeting notes. |
+| `regular_project_journal` | Meaningful changes become short, sourced entries in one stable journal per project. |
 
 Start with one connected service. In your assistant's recurring task feature, ask it to run that skill from this vault each weekday. The `regular_day_start` and `regular_day_end` wrappers combine several skills once you have connected the services they use. If your assistant has no recurring task feature, use a scheduler that launches the assistant in this vault. See [HOW_TO_INITIALIZE.md](HOW_TO_INITIALIZE.md) for the setup and routine checklist.
+
+For project journals, choose an initial date window, accounts, timezone and recurring time. Follow [the collection runbook](90_System/Skills/project_journal/RUNBOOK.md). The vault includes an empty journal index and a template; scheduling and personal project history are not included.
 
 ## What's included
 
@@ -95,7 +98,7 @@ Start with one connected service. In your assistant's recurring task feature, as
 00_Mailbox/        Email summaries and threads
 10_DailyBriefs/    Daily brief notes
 20_Meetings/       Meeting notes (with templates)
-30_Projects/       Project notes and snapshots
+30_Projects/       Project notes, snapshots, and stable journals in Journal/
 40_People/         People records
 50_Areas/          Area-level notes
 60_SOPs/           Standard operating procedures
@@ -149,6 +152,7 @@ Skills live in `90_System/Skills/`. Each skill is a focused automation with one 
 | `create_links` | Converts aliases to Obsidian wikilinks across the vault |
 | `files_search` | Searches the filesystem with explicit agent-passed paths |
 | `deferred_task_queue` | Queues and runs tasks that cannot finish in the current session |
+| `regular_project_journal` | Maintains project history with concise changes and source links |
 | `git_submodules_pull` | Refreshes git submodules during routine maintenance |
 | `Web_Daily_Brief` | Fetches daily news, weather, events, and market snapshot |
 
