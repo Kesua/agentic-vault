@@ -15,7 +15,7 @@ Every morning your calendar, inbox, Slack, tasks and the news land in your notes
 - **Zero lock-in** — everything is Markdown in an [Obsidian](https://obsidian.md) folder. No database, no SaaS, no plugins required.
 - **Any assistant** — Claude Code, Codex, Gemini CLI and OpenCode all read the same instructions and skills. Switch tools; keep your brain.
 - **Safe by design** — the AI never improvises access to your accounts. Small, tested scripts ("skills") do the syncing; email is draft-only; secrets never leave `90_System/secrets/`.
-- **Five-minute setup** — double-click one file; a browser wizard connects your accounts and runs the first import.
+- **Five-minute setup** — let your AI agent [install it for you](SETUP_FOR_AGENTS.md), or double-click one file; a browser wizard connects your accounts and runs the first import.
 
 > **Battle-tested daily.** The author's own vault has run on two scheduled routines (05:30 and 16:00) since February 2026: 250+ daily briefs, ~780 meeting notes, ~8,000 mailbox items and 40 project journals — written by scripts, consistently named, all searchable plain text.
 
@@ -105,6 +105,18 @@ A **meeting note** (`20_Meetings/2026/10/22/1400 - Acme renewal call.md`) is cre
 ## Quick start
 
 **Needs:** Windows or macOS, and one AI coding assistant (the wizard can install Claude Code, Codex, Gemini CLI or OpenCode for you). Python 3.9+ is installed automatically if missing. [Obsidian](https://obsidian.md) is recommended for reading.
+
+### Let your AI agent install it (recommended)
+
+Already use Claude Code or Codex? Open it in an empty folder and paste:
+
+```text
+Set up Agentic Vault for me by following SETUP_FOR_AGENTS.md from https://github.com/Kesua/agentic-vault. Ask me all questions at once.
+```
+
+The agent clones the repo, installs everything, asks you once which services to connect, how far back to import (7, 30 or 90 days per service), when the routines should run and whether to commit to git — then imports your history and prepares the schedule. You only sign in and paste API tokens into the wizard; the agent never sees them. Details: [SETUP_FOR_AGENTS.md](SETUP_FOR_AGENTS.md).
+
+### Or set it up yourself
 
 1. **Download** — clone the repo or grab the ZIP from the [latest release](https://github.com/Kesua/agentic-vault/releases/latest).
 2. **Run the wizard** — double-click `Setup_Windows.bat` (Windows) or `Setup_Mac.command` (macOS). It opens in your browser.

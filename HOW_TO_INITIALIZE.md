@@ -2,6 +2,8 @@
 
 This file is for a new, non-technical user of this vault.
 
+If you already use Claude Code or Codex, you can let it do most of this for you: see [SETUP_FOR_AGENTS.md](SETUP_FOR_AGENTS.md).
+
 Goal:
 - get the vault open
 - put every secret in the right place
