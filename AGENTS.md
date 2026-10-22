@@ -52,6 +52,9 @@ Scope: everything in this repository.
 - Skills are available in `.agents/skills/`.
 - Use `regular_*` for deterministic maintenance flows.
 - Use `regular_project_journal` for scheduled incremental project journals or the owner's explicit request for the same update; follow its collection runbook. Installing it does not schedule future runs.
+- `regular_day_start` ends with `regular_daily_focus` and `regular_day_end` ends with `regular_missed_replies`; both read stored vault files only.
+- Send Telegram notifications (`adhoc_send_telegram_notification`) or commit/push (`regular_vault_commit`) only when the routine prompt or the owner asks. Push only to the allow-listed private remote; never pull, merge or force-push to recover a rejected push.
+- Scheduled-run prompts live in `90_System/Automations/`.
 - Use `bulk_*` for deterministic backfills.
 - Use `adhoc_*` for one-off external-system or local-file work.
 - Local browser automation is available through `adhoc_browser_playwright`, backed by `90_System/Skills/browser_playwright/`.

@@ -71,6 +71,7 @@ copy_tree_filtered "$REPO_ROOT/.claude/hooks"                            "$STAGI
 copy_tree_filtered "$REPO_ROOT/.claude/skills"                           "$STAGING/.claude/skills"
 copy_tree_filtered "$REPO_ROOT/90_System/Skills"                         "$STAGING/90_System/Skills" --ext ".md,.py,.ps1"
 copy_tree_filtered "$REPO_ROOT/90_System/Integrations/Documentation"     "$STAGING/90_System/Integrations/Documentation" --ext ".md"
+copy_tree_filtered "$REPO_ROOT/90_System/Automations"                    "$STAGING/90_System/Automations" --ext ".md"
 
 # ── Setup wizard and bootstrap scripts (new) ─────────────────────────
 
@@ -87,6 +88,7 @@ copy_file "90_System/Integrations/telegram_bridge/run_telegram_bridge.ps1"
 copy_file "90_System/Integrations/telegram_bridge/start_telegram_bridge.ps1"
 copy_file "90_System/Integrations/telegram_bridge/stop_telegram_bridge.ps1"
 copy_file "90_System/Integrations/telegram_bridge/telegram_bridge.py"
+copy_file "90_System/Integrations/telegram_bridge/send_telegram_notification.py"
 copy_file "90_System/Integrations/slack/app_info.txt"
 copy_file "90_System/Integrations/slack/app_manifest.readonly.yaml"
 copy_file "90_System/Integrations/slack/app_manifest.writefuture.yaml"

@@ -18,6 +18,7 @@ Run the vault’s morning automations in one go. This is best-effort: each step 
 - `regular_process_emails`
 - `regular_process_slack`
 - `regular_web_daily_brief`
+- `regular_daily_focus` (after the syncs above; uses the stored files only)
 
 ## Run
 - Git submodules:
@@ -34,8 +35,16 @@ Run the vault’s morning automations in one go. This is best-effort: each step 
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_sources.py fetch --pretty > 70_Exports\sources.json`
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_daily_brief.py render --sources-file 70_Exports\sources.json --output-file 70_Exports\daily_news.md`
   - `.\.venv\Scripts\python.exe 90_System\Skills\Web_Daily_Brief\web_daily_brief.py apply --content-file 70_Exports\daily_news.md`
+- Focus topics:
+  - Follow `.agents/skills/regular_daily_focus/SKILL.md`.
+
+## Optional follow-ups (only when the routine prompt asks for them)
+- **Telegram summary** — after the steps above, send today's focus topics plus a one-line count of meetings and due tasks via `adhoc_send_telegram_notification`. Title it `Day start YYYY-MM-DD`.
+- **Commit** — `regular_vault_commit` with `--routine day-start`; add `--push` only if the prompt asks to push.
+- Run follow-ups even if a sync step failed, and list the failed steps in the summary.
 
 ## Notes
 - Use this when the task is the routine morning prep flow.
 - If aliases changed later in the day, follow up with `regular_create_links`.
 - The Slack step includes direct and group messages visible to the token owner in addition to channels.
+- Ready-to-paste scheduled prompts: `90_System/Automations/`.

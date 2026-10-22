@@ -176,6 +176,35 @@ class NotificationHelperTests(unittest.TestCase):
         send_mock.assert_called_once_with(config, "<b>test</b>", dry_run=True)
         self.assertIn("validated", stdout.getvalue())
 
+    def test_cli_reads_html_from_file(self) -> None:
+        config = make_config()
+        stdout = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            html_path = Path(temp_dir) / "message.html"
+            html_path.write_text("<b>Focus</b>\n- kůň", encoding="utf-8")
+            with (
+                mock.patch.object(notifier, "load_config", return_value=config),
+                mock.patch.object(notifier, "send_html_notification") as send_mock,
+                redirect_stdout(stdout),
+            ):
+                exit_code = notifier.main(["--html-file", str(html_path), "--dry-run"])
+
+        self.assertEqual(0, exit_code)
+        send_mock.assert_called_once_with(config, "<b>Focus</b>\n- kůň", dry_run=True)
+
+    def test_cli_missing_html_file_is_validation_error(self) -> None:
+        config = make_config()
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(notifier, "load_config", return_value=config),
+            mock.patch.object(notifier, "send_html_notification") as send_mock,
+            redirect_stderr(stderr),
+        ):
+            exit_code = notifier.main(["--html-file", "does-not-exist.html"])
+
+        self.assertEqual(2, exit_code)
+        send_mock.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,13 @@ Skills are optional mini-playbooks that the agent can load on demand.
   - Collection and progress: `90_System/Skills/project_journal/RUNBOOK.md`
   - Journals: `30_Projects/Journal/`; template: `30_Projects/Templates/ProjectJournal_TEMPLATE.md`
 
+## Daily routine add-ons
+- `regular_daily_focus`: last step of `regular_day_start`; writes `# Focus topics for today` into today's brief from yesterday's stored email and Slack.
+- `regular_missed_replies`: last step of `regular_day_end`; writes `# Possibly forgotten` into today's brief from today's stored email, Slack and meetings.
+- `regular_vault_commit`: commits routine-owned folders; pushes only to an allow-listed private remote.
+- `adhoc_send_telegram_notification`: sends one requested summary to the owner's single Telegram chat.
+- Scheduled prompts that combine them: `90_System/Automations/`.
+
 ## Notable adhoc skills
 - `adhoc_browser_playwright`: real Chromium browser workflows for DOM inspection, screenshots, response capture, and browser-gated pages
 

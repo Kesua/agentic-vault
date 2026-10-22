@@ -121,7 +121,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=str(DEFAULT_CONFIG_PATH),
         help="Path to the existing telegram_bridge.env file",
     )
-    parser.add_argument("--html", required=True, help="Telegram-compatible HTML message")
+    message = parser.add_mutually_exclusive_group(required=True)
+    message.add_argument("--html", help="Telegram-compatible HTML message")
+    message.add_argument(
+        "--html-file",
+        help="UTF-8 file with the Telegram-compatible HTML message (avoids shell quoting)",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -140,8 +145,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Configuration error: {_safe_error_text(exc)}", file=sys.stderr)
         return 2
 
+    if args.html_file:
+        try:
+            html = Path(args.html_file).read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"Validation error: cannot read HTML file ({type(exc).__name__}).", file=sys.stderr)
+            return 2
+    else:
+        html = args.html
+
     try:
-        send_html_notification(config, args.html, dry_run=args.dry_run)
+        send_html_notification(config, html, dry_run=args.dry_run)
     except NotificationValidationError as exc:
         print(f"Validation error: {_safe_error_text(exc, config)}", file=sys.stderr)
         return 2
@@ -150,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     action = "validated" if args.dry_run else "sent"
-    print(f"Telegram notification {action} ({len(args.html)} characters).")
+    print(f"Telegram notification {action} ({len(html)} characters).")
     return 0
 
 
