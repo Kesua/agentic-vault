@@ -1,161 +1,211 @@
 # Agentic Vault
 
-**Your notes update themselves when you schedule the right skill.** Connect an account in the setup wizard, then schedule a repo-local `regular_*` skill as a recurring task in Codex, Claude Code, or another assistant that supports routines. For example, `regular_gcal_today` turns upcoming calendar events into meeting notes; `regular_process_emails` adds useful email context to the mailbox; `regular_daily_brief_todoist` refreshes tasks in daily briefs.
+**A second brain that fills itself — and an AI chief of staff that actually knows your work.**
 
-Agentic Vault is an Obsidian-friendly personal workspace with local skills, note templates, and a setup wizard. The wizard connects accounts and can run a first import. **It does not schedule future runs**; you choose which skills run, when, and in which assistant.
+Every morning your calendar, inbox, Slack, tasks and the news land in your notes as plain Markdown. Every evening meeting transcripts, new contacts and project changes are filed and linked. Then you open Claude Code, Codex, Gemini CLI or OpenCode in the folder and ask:
 
-## Keep the vault current
+> *"Prep me for the 14:00 — what did we promise them last time?"*
+> *"What is still open on the website relaunch, and who owes what?"*
+> *"Draft a reply to the thread about the contract renewal."*
 
-| Schedule this skill | What changes in the vault |
+…and it answers from **your** files, with links to the sources.
+
+<!-- TODO: add a 20-second GIF or screenshot of a Daily Brief and a linked meeting note in Obsidian here. -->
+
+- **Zero lock-in** — everything is Markdown in an [Obsidian](https://obsidian.md) folder. No database, no SaaS, no plugins required.
+- **Any assistant** — Claude Code, Codex, Gemini CLI and OpenCode all read the same instructions and skills. Switch tools; keep your brain.
+- **Safe by design** — the AI never improvises access to your accounts. Small, tested scripts ("skills") do the syncing; email is draft-only; secrets never leave `90_System/secrets/`.
+- **Five-minute setup** — let your AI agent [install it for you](SETUP_FOR_AGENTS.md), or double-click one file; a browser wizard connects your accounts and runs the first import.
+
+> **Battle-tested daily.** The author's own vault has run on two scheduled routines (05:30 and 16:00) since February 2026: 250+ daily briefs, ~780 meeting notes, ~8,000 mailbox items and 40 project journals — written by scripts, consistently named, all searchable plain text.
+
+---
+
+## A day with Agentic Vault
+
+```mermaid
+flowchart LR
+    subgraph Morning["☀️ regular_day_start"]
+        A[Calendar] --> M[Meeting notes]
+        B[Todoist] --> D[Daily Brief]
+        C[Gmail + Slack] --> I[00_Mailbox]
+        N[News & weather] --> D
+    end
+    subgraph Evening["🌙 regular_day_end"]
+        F[Fireflies transcripts] --> M
+        I --> P[People notes]
+        M --> P
+        L[Auto-linking] --> K[(Your vault)]
+    end
+    M --> K
+    D --> K
+    I --> K
+    P --> K
+    K --> Q{{"You + any AI assistant"}}
+```
+
+| When | What happens without you lifting a finger |
 |---|---|
-| `regular_gcal_today` | Upcoming calendar events become meeting notes. |
-| `regular_process_emails` | Important emails and replied threads appear in `00_Mailbox/`. |
-| `regular_daily_brief_todoist` | Todoist tasks appear in upcoming daily briefs. |
-| `regular_process_slack` | Visible Slack conversations become summaries and thread snapshots in `00_Mailbox/`. |
-| `regular_fireflies_sync` | Transcript summaries are added to matching meeting notes. |
+| **Morning** | Today's meetings become notes with attendees and context. Your Todoist tasks, weather and headlines go into a fresh **Daily Brief**. Important emails and the Slack threads you are in are summarized into `00_Mailbox/`, and the brief gets **Focus topics for today**. A short summary can arrive on Telegram before you open your laptop. |
+| **During the day** | Ask the assistant to prep a meeting, find a decision, draft a reply, update a spreadsheet copy or turn raw notes into action items. It reads the vault first, so answers come with sources. |
+| **Evening** | Meeting transcripts are attached to the right meeting notes, new people get their own notes, and names and project aliases become `[[wikilinks]]` across the vault. A **Possibly forgotten** check lists unanswered questions and promises you made today. Optionally, the results are committed to your private git repository. |
+| **Over weeks** | Each project keeps one **journal**: short, dated, sourced entries for every decision, deadline and handoff — so "what happened on X?" takes seconds, not an afternoon of searching. |
 
-Start with one connected service. In your assistant's recurring task feature, ask it to run that skill from this vault each weekday. The `regular_day_start` and `regular_day_end` wrappers combine several skills once you have connected the services they use. If your assistant has no recurring task feature, use a scheduler that launches the assistant in this vault. See [HOW_TO_INITIALIZE.md](HOW_TO_INITIALIZE.md) for the setup and routine checklist.
+## What it actually produces
 
-## What's included
+A **Daily Brief** (`10_DailyBriefs/2026/10/2026-10-22_Daily_Brief.md`):
 
-- **Vault structure** — Markdown-first folders for mailbox, daily briefs, meetings, projects, people, and areas
-- **Agent guidance** — Repo-local config for Claude Code, Codex, Gemini CLI, and OpenCode (`AGENTS.md`, `SOUL.md`, `CLAUDE.md`, `.codex/`)
-- **Skills library** — Wrapper skills in `.agents/` and runnable automation in `90_System/Skills/`:
-  - Google Workspace: Calendar, Gmail, Drive, Docs, Sheets, and Slides
-  - Playwright browser automation (optional install)
-  - Fireflies transcript sync
-  - Design review and build skills
-  - Task queue and deferred-task workflows
-- **Local AI setup** — Wizard-assisted install and configuration of LM Studio or Ollama with model selection and OpenCode integration
-- **Note templates** — Meeting notes, project snapshots, people records, and daily briefs
+```markdown
+# Daily News
+- Weather: Prague 14 °C, rain after 16:00
+- Expected today: ECB rate decision; city transport strike
+- Yesterday in AI: ...
 
-## What's excluded
+# Tasks
+- [ ] Send revised quote to [[Petra Novak]] (due today)
+- [ ] Review Q4 budget draft
 
-- Personal notes, meeting history, people records, and area/project content
-- Secrets, OAuth tokens, runtime state, logs, and machine-local settings
-- Obsidian workspace state and ad-hoc attachments
-
-## Prerequisites
-
-- **Python 3.9+** — the setup script can install it via `winget` on Windows or Homebrew on macOS if missing
-- **Obsidian** (recommended) — open the vault root as a vault; no plugins required for core functionality
-- **A coding assistant** — one of: Claude Code, OpenAI Codex, Gemini CLI, or OpenCode (the wizard can install one on Windows or macOS)
-
-## Installation
-
-### Windows
-
-1. Clone or download this repository.
-2. Double-click **`Setup_Windows.bat`**.
-3. The wizard opens automatically in your browser — follow the on-screen steps.
-4. Press `Ctrl+C` in the terminal when you are done.
-
-### macOS / Linux
-
-1. Clone or download this repository.
-2. Double-click **`Setup_Mac.command`** in Finder, **or** run in a terminal:
-   ```bash
-   bash _setup/bootstrap_mac.sh
-   ```
-3. The wizard opens automatically in your browser — follow the on-screen steps.
-4. Press `Ctrl+C` in the terminal when you are done.
-
-> If macOS says "permission denied", run once:
-> `chmod +x Setup_Mac.command _setup/bootstrap_mac.sh`
-
-### What the wizard configures
-
-| Step | What it does |
-|------|-------------|
-| Coding assistant | Detects or installs Claude Code, Codex, Gemini CLI, or OpenCode |
-| Google Workspace | OAuth setup for Calendar, Gmail, Drive, Docs, Sheets, and Slides |
-| Todoist | Saves your personal API token for task sync |
-| Fireflies | Saves your API key for transcript sync |
-| Clockify | Saves your API key for time tracking |
-| Slack | User OAuth Token and workspace exclusions for user-visible conversations |
-| Telegram | Bot token and allowed user/chat IDs for vault messaging |
-| Local AI | Optional LM Studio or Ollama install with model selection and OpenCode integration |
-| Playwright | Optional Chromium-based browser automation tooling |
-
-## After setup
-
-1. Open the vault root in Obsidian.
-2. Review and personalize the four core files:
-   - `AGENTS.md` — agent routing and canonical paths
-   - `SOUL.md` — agent personality and behavioral defaults
-   - `MEMORY.md` — persistent lessons and preferences (read by the agent every session)
-   - `60_SOPs/_HowIWork.md` — your personal working style
-3. Adjust `.codex/config.toml` if you want this vault to reference additional external repos.
-4. Start Codex, Claude Code, or your chosen assistant in the vault root and ask it to run one connected `regular_*` skill once.
-5. Schedule that skill as a recurring task in your assistant or a scheduler that starts the assistant in this vault. The initial wizard import is a one-time run.
-
-## Folder structure
-
-```
-00_Mailbox/        Email summaries and threads
-10_DailyBriefs/    Daily brief notes
-20_Meetings/       Meeting notes (with templates)
-30_Projects/       Project notes and snapshots
-40_People/         People records
-50_Areas/          Area-level notes
-60_SOPs/           Standard operating procedures
-70_Exports/        Scratch space for exported and edited external files
-90_System/         Skills, task queue, secrets (git-ignored), and system docs
-_setup/            Bootstrap scripts
-src/               Setup wizard source code
+# Focus topics for today
+- Acme renewal — they asked for a revised quote yesterday on Slack; call at 14:00.
+- Two email threads waiting more than 3 days for your reply.
 ```
 
-## Available skills
+News and tasks are synced by scripts. **Focus topics** are the assistant's reading of yesterday's email and Slack, today's meetings and due tasks — the 30-second answer to "what should I care about today?".
 
-Skills live in `90_System/Skills/`. Each skill is a focused automation with one job.
+At the end of the day the brief gets one more section, so nothing slips through:
 
-**Google Workspace**
+```markdown
+# Possibly forgotten
+- **Reply to Petra** — asked for the signed NDA at 11:20, no answer yet. [Email](...)
+- **Send the demo recording** — promised in the 14:00 call. [[1400 - Acme renewal call]]
+```
 
-| Skill | What it does |
-|-------|-------------|
-| `gcal_today` | Syncs upcoming Google Calendar meetings into meeting notes |
-| `adhoc_gcal` | On-demand calendar access and draft event creation |
-| `gmail_assistant` | Searches Gmail, summarizes threads, and creates draft replies |
-| `process_emails` | Exports important emails and replied threads into `00_Mailbox/` |
-| `google_drive_assistant` | Searches Drive and reads/edits Docs, Sheets, and Slides |
+Both lists can also land on your phone as a Telegram message.
 
-**Tasks and time**
+A **project journal** entry (`30_Projects/Journal/Website Relaunch.md`) — one sentence, one source:
 
-| Skill | What it does |
-|-------|-------------|
-| `daily_brief_todoist` | Pulls Todoist tasks into daily briefs |
-| `adhoc_todoist` | On-demand task search and task creation |
-| `clockify_sync` | Lists projects, summarizes time, and creates time entries |
+```markdown
+### 2026-10-21
+- Done — homepage copy approved; Petra to publish by 2026-10-23. [Client email](../../00_Mailbox/2026/10/21/approved-thread.md)
+- Waiting — DNS change depends on IT ticket. [Slack thread](../../00_Mailbox/2026/10/21/slack-it-dns.md)
+```
 
-**Meetings and transcripts**
+A **meeting note** (`20_Meetings/2026/10/22/1400 - Acme renewal call.md`) is created in the morning with `## Calendar (auto)` (time, attendees, description, links) and an empty `## Preparation` the assistant can fill on request. In the evening Fireflies adds `## Fireflies (auto)` — summary, action items per owner — and the transcript, with speakers linked to their people notes. Your own `## Meeting Notes` are never overwritten.
 
-| Skill | What it does |
-|-------|-------------|
-| `fireflies_sync` | Backfills Fireflies transcript summaries into meeting notes |
-| `adhoc_fireflies` | On-demand transcript search and retrieval |
-| `meeting_attendees_people_sync` | Creates or refreshes people notes from meeting attendees |
+## Why it works
 
-**Communication**
+| Principle | What it means for you |
+|---|---|
+| **Files are the memory** | Notes are plain Markdown with stable paths (`20_Meetings/YYYY/MM/DD/HHmm - Title.md`). Any tool, any AI, any decade can read them. |
+| **Scripts fetch, the AI thinks** | Syncing is done by deterministic Python skills, not by an LLM clicking around your accounts. Runs are cheap, repeatable and auditable — tokens go to reasoning. |
+| **The agent knows the house rules** | `AGENTS.md` (where things live and where to look first), `SOUL.md` (how it behaves) and a short core `MEMORY.md` (lessons you taught it) are read at the start of every session, by every assistant. Topic lessons live in `90_System/Memory/` and are read only when a task needs them, so startup stays cheap. |
+| **Nothing outside is touched in place** | External files are copied to `70_Exports/YYYY/MM/DD/` before editing. Emails become drafts, never sent. Folder structure and your notes are never moved or deleted without asking. |
+| **Continuity between sessions** | *Workblocks* carry the handoff state of unfinished work, so tomorrow's session picks up where today's stopped. |
 
-| Skill | What it does |
-|-------|-------------|
-| `slack_assistant` | Reads user-visible Slack channels and DMs, summarizes threads |
-| `process_slack` | Exports Slack summaries and thread snapshots into `00_Mailbox/` |
+## Quick start
 
-**Vault maintenance**
+**Needs:** Windows or macOS, and one AI coding assistant (the wizard can install Claude Code, Codex, Gemini CLI or OpenCode for you). Python 3.9+ is installed automatically if missing. [Obsidian](https://obsidian.md) is recommended for reading.
 
-| Skill | What it does |
-|-------|-------------|
-| `create_links` | Converts aliases to Obsidian wikilinks across the vault |
-| `files_search` | Searches the filesystem with explicit agent-passed paths |
-| `deferred_task_queue` | Queues and runs tasks that cannot finish in the current session |
-| `git_submodules_pull` | Refreshes git submodules during routine maintenance |
-| `Web_Daily_Brief` | Fetches daily news, weather, events, and market snapshot |
+### Let your AI agent install it (recommended)
 
-**Optional / specialized**
+Already use Claude Code or Codex? Open it in an empty folder and paste:
 
-| Skill | What it does |
-|-------|-------------|
-| `browser_playwright` | Real Chromium browser sessions for browser-gated websites |
-| `power_bi_project` | Reviews and edits Power BI Project folders |
-| `claude_code_mirror` | Syncs Claude Code skill definitions into the vault |
+```text
+Set up Agentic Vault for me by following SETUP_FOR_AGENTS.md from https://github.com/Kesua/agentic-vault. Ask me all questions at once.
+```
+
+The agent clones the repo, installs everything, asks you once which services to connect, how far back to import (7, 30 or 90 days per service), when the routines should run and whether to commit to git — then imports your history and prepares the schedule. You only sign in and paste API tokens into the wizard; the agent never sees them. Details: [SETUP_FOR_AGENTS.md](SETUP_FOR_AGENTS.md).
+
+### Or set it up yourself
+
+1. **Download** — clone the repo or grab the ZIP from the [latest release](https://github.com/Kesua/agentic-vault/releases/latest).
+2. **Run the wizard** — double-click `Setup_Windows.bat` (Windows) or `Setup_Mac.command` (macOS). It opens in your browser.
+3. **Connect what you use** — Google (Calendar, Gmail, Drive), Todoist, Slack, Fireflies, Clockify, Telegram. Start with one; add more later. The wizard runs a first import.
+4. **Open the folder in Obsidian** and personalize `SOUL.md`, `MEMORY.md` and `60_SOPs/_HowIWork.md`.
+5. **Make it daily** — paste the ready-made prompts from [`90_System/Automations/`](90_System/Automations/README.md) into your assistant's scheduler (Codex automations, Claude Code scheduled tasks, …): day start at 05:30, day end at 16:00, project journal at 16:30. Keep or delete the optional lines for Telegram, commit and push, or add your own wishes in plain language.
+
+> **The wizard does not schedule anything.** You decide what runs, when, and in which assistant. Until you schedule a routine, the vault only updates when you ask.
+
+**Your preferences for every project (optional).** Rules that should apply in all folders, not just this vault — tone, language, "confirm before deciding" — belong in each assistant's user-level file, outside the vault: Codex `~/.codex/AGENTS.md`, Claude Code `~/.claude/CLAUDE.md`, Gemini CLI `~/.gemini/GEMINI.md`. Each assistant reads only its own file, so keep the same text in every one you use. Vault-specific rules stay in `AGENTS.md`, `SOUL.md` and `MEMORY.md`; after editing `AGENTS.md` or `SOUL.md`, regenerate the Claude Code mirror with `python 90_System/Skills/claude_code_mirror/sync_claude_code.py`.
+
+On macOS, if you see "permission denied": `chmod +x Setup_Mac.command _setup/bootstrap_mac.sh`. Full walkthrough for non-technical users: [HOW_TO_INITIALIZE.md](HOW_TO_INITIALIZE.md).
+
+## Things to ask your vault
+
+```text
+Run my day start and tell me the three things that matter most today.
+Prep the 14:00 meeting: goal, open questions, what we promised last time.
+Turn these raw notes into a meeting note with decisions and owners: (paste)
+What changed on the website relaunch this week? Cite sources.
+Who is Petra, when did we last talk, and what does she owe me?
+Draft a reply to the latest email from Acme — draft only.
+Copy the Q4 budget sheet into exports and add a variance column.
+```
+
+More ready-to-use prompts: [AgentPrompts.md](AgentPrompts.md) and [60_SOPs/_AgentGuide.md](60_SOPs/_AgentGuide.md).
+
+## Skills
+
+Skills are small, single-purpose helpers. The AI chooses them by prefix:
+
+- **`regular_*`** — routines you schedule; deterministic and safe to rerun.
+- **`bulk_*`** — one-off backfills over a date window (e.g. import the last 90 days of meetings).
+- **`adhoc_*`** — on-demand lookups, drafts and one-off actions.
+
+<details>
+<summary><b>Full skill list</b></summary>
+
+| Area | Routines (`regular_*`) | On demand (`adhoc_*`, `bulk_*`, other) |
+|---|---|---|
+| Daily routines | `regular_day_start` (+ `regular_daily_focus`), `regular_day_end` (+ `regular_missed_replies`), `regular_vault_commit` | `adhoc_send_telegram_notification` |
+| Calendar | `regular_gcal_today` | `adhoc_gcal` (incl. draft events), `bulk_sync_gcal` |
+| Email | `regular_process_emails` | `adhoc_gmail` (search, summarize, draft replies), `bulk_sync_gmail` |
+| Slack | `regular_process_slack` | `adhoc_slack`, `bulk_sync_slack` |
+| Meetings & transcripts | `regular_fireflies_sync` | `adhoc_fireflies`, `bulk_sync_fireflies` |
+| Tasks & time | `regular_daily_brief_todoist` | `adhoc_todoist`, `adhoc_clockify` |
+| News | `regular_web_daily_brief` | — |
+| People & projects | `regular_people_sync`, `regular_project_journal`, `regular_people_workflow`, `regular_project_workflow` | — |
+| Vault upkeep | `regular_create_links`, `regular_git_submodules_pull`, `regular_deferred_task_runner` | `adhoc_deferred_task_queue`, `adhoc_files_search` |
+| Google Drive | — | `adhoc_google_drive`, `gdocs`, `gsheets`, `gslides` |
+| Office files | — | `adhoc_word_docs`, `adhoc_spreadsheet_skills`, `adhoc_pdf_skills`, `adhoc_power_bi_project` |
+| Browser & design | — | `adhoc_browser_playwright`, `adhoc_design_*` |
+| Phone access | — | `adhoc_bridge_start`, `adhoc_bridge_end` (Telegram bridge) |
+
+Skill instructions live in `.agents/skills/` (mirrored to `.claude/skills/`); the runnable code lives in `90_System/Skills/`.
+
+</details>
+
+## Folder map
+
+```text
+00_Mailbox/      Email and Slack summaries and threads, by date
+10_DailyBriefs/  One brief per day
+20_Meetings/     One note per meeting, by date
+30_Projects/     Project notes, snapshots and Journal/
+40_People/       One note per person
+50_Areas/        Ongoing areas of responsibility
+60_SOPs/         How you work, templates, agent guide
+70_Exports/      Safe copies of external files the agent edits
+80_Workblocks/   Handoff state for unfinished work
+90_System/       Skills, task queue, secrets (git-ignored)
+```
+
+## Privacy and safety
+
+- **Local first.** Your notes, tokens and logs stay on your machine; `.gitignore` keeps secrets, runtime state and personal content out of git.
+- **Least privilege.** Each service is reached only through its skill, with your own token. Gmail replies are drafts only, calendar events are drafted and created only after you confirm; Slack access is limited to what you can already see.
+- **Guardrails for every assistant.** Repo-local settings for Claude Code (`.claude/` permissions and a pre-edit hook) and Codex (`.codex/` file-access policy) block reads of secrets and writes to protected folders; Gemini (`.gemini/`) keeps them out of its context.
+- **Push only where it is private.** `regular_vault_commit` commits only routine-owned folders and pushes only to a remote you have explicitly allow-listed — never to the public template you cloned. A rejected push is reported, never "fixed" with a merge or force-push.
+- **The template ships empty.** No personal notes, meeting history or people records — just structure, templates and skills.
+
+## FAQ
+
+**Do I need Obsidian?** No. It is plain Markdown; Obsidian just makes the links and graph pleasant.
+
+**Do I need every integration?** No. Start with Google Calendar alone — meeting notes plus a Daily Brief are already worth it.
+
+**Does it work offline or with a local model?** The wizard can set up LM Studio or Ollama with OpenCode. Syncing still needs internet access to the services you connect.
+
+**Can I message it from my phone?** Yes — the optional Telegram bridge lets you ask for today's brief or search the vault from Telegram, and the daily routines can push their focus topics and reminders to the same chat.
+
+**Will it mess up my notes?** Routines only write to their own folders, preserve manual sections, and never move, rename or delete your files without an explicit request.

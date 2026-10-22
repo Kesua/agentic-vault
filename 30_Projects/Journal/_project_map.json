@@ -1,0 +1,14 @@
+{
+  "_about": [
+    "Single source for matching meetings (and other sources) to project journals in 30_Projects/Journal/.",
+    "Keys of 'projects' must equal a journal filename without .md. Used by 90_System/Skills/meeting_metadata (gcal_today, fireflies_sync, backfill).",
+    "domains: external attendee email domains owned by the client (strongest signal; subdomains match). Never add shared domains such as your own company domain, gmail.com or outlook.com.",
+    "title_keywords: whole words/phrases matched in the meeting title, case- and diacritics-insensitive. Prefer client names; avoid generic product words shared by several projects.",
+    "slack_channels: dedicated Slack channel names (without #) for this project only; shared channels are not listed.",
+    "Rule: title keywords and domains must agree on exactly one project, otherwise project stays empty (never guess).",
+    "The entry below is a fake example: replace it with your own projects, or leave 'projects' empty ({}) to disable project inference."
+  ],
+  "projects": {
+    "Example Client - Pilot": {"domains": ["example.com"], "title_keywords": ["Example Client"], "slack_channels": ["example-client-pilot"]}
+  }
+}

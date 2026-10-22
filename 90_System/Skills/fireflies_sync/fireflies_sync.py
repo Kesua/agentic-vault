@@ -14,6 +14,12 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+META_SKILL_DIR = Path(__file__).resolve().parents[1] / "meeting_metadata"
+if str(META_SKILL_DIR) not in sys.path:
+    sys.path.insert(0, str(META_SKILL_DIR))
+
+import meeting_metadata  # noqa: E402
+
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SECRETS_DIR = REPO_ROOT / "90_System" / "secrets"
@@ -714,6 +720,19 @@ def _upsert_transcript_block(note_text: str, new_block: str) -> str:
     return (note_text.rstrip() + "\n\n" + new_block.rstrip() + "\n").rstrip() + "\n"
 
 
+def _apply_note_metadata(
+    note_text: str,
+    project_rules: list[meeting_metadata.ProjectRule],
+    sentences: list[FirefliesSentence],
+    path: Path | None = None,
+) -> str:
+    """Set frontmatter `speakers` from the transcript and fill an empty `project` (attendees untouched)."""
+    speakers = meeting_metadata.dedupe_speakers([s.speaker_name for s in sentences])
+    return meeting_metadata.apply_metadata(
+        note_text, project_rules, speakers=speakers or None, path=path
+    ).text
+
+
 def sync_transcripts_to_notes(from_day: date, to_day: date, dry_run: bool) -> None:
     api_key = _load_api_key()
     transcripts = fetch_transcripts(from_day, to_day)
@@ -722,6 +741,15 @@ def sync_transcripts_to_notes(from_day: date, to_day: date, dry_run: bool) -> No
     notes_from = from_day - timedelta(days=14)
     notes_to = to_day
     notes = _iter_meeting_notes(notes_from, notes_to)
+
+    try:
+        project_rules = meeting_metadata.load_project_map()
+    except (OSError, ValueError) as exc:
+        print(
+            f"Warning: project map not loaded ({exc}); project inference skipped.",
+            file=sys.stderr,
+        )
+        project_rules = []
 
     unmatched: list[FirefliesTranscript] = []
     matched: dict[Path, tuple[MeetingNoteMeta, list[FirefliesTranscript]]] = {}
@@ -759,6 +787,8 @@ def sync_transcripts_to_notes(from_day: date, to_day: date, dry_run: bool) -> No
         if sentences:
             transcript_block = _render_transcript_block(sentences)
             out = _upsert_transcript_block(out, transcript_block)
+
+        out = _apply_note_metadata(out, project_rules, sentences, note.path)
 
         if out == text:
             continue

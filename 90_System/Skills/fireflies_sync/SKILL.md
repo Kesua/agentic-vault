@@ -11,6 +11,7 @@ description: "Regular Fireflies sync: fetch transcript summaries in a date windo
 - Upserts exactly one `## Fireflies (auto)` block per meeting note (safe from `gcal_today` overwrites because it is inserted in the preserved tail) with metadata, summary, action items, and keywords
 - Fetches the full sentence-level transcript for each matched note and appends it as a `## Fireflies Transcript (auto)` block at the very end of the note, formatted as `[HH:MM:SS] Speaker: text`
 - If multiple transcripts map to the same note, selects one “best” transcript and attaches only that one
+- Sets frontmatter `speakers:` from the transcript's speaker names (deduped, first-appearance order; `attendees` stay the calendar invite) and fills an empty `project:` via `90_System/Skills/meeting_metadata` + `30_Projects/Journal/_project_map.json` (ambiguous → empty, manual value never overwritten)
 
 ## Matching rules (current)
 - Uses these fields from meeting notes (usually under `## Calendar (auto)`):
@@ -49,6 +50,9 @@ description: "Regular Fireflies sync: fetch transcript summaries in a date windo
   - `.\.venv\Scripts\python.exe 90_System\Skills\fireflies_sync\fireflies_sync.py sync --from 2026-01-01 --to 2026-01-31`
 - Sync last N days:
   - `.\.venv\Scripts\python.exe 90_System\Skills\fireflies_sync\fireflies_sync.py sync --days-back 30`
+
+- Backfill `project`/`speakers` of existing notes from local content only (no API; frontmatter-only, idempotent; folder dates):
+  - `.\.venv\Scripts\python.exe 90_System\Skills\meeting_metadata\meeting_metadata.py backfill --from YYYY-MM-DD --to YYYY-MM-DD --dry-run`
 
 ## Notes
 - `--dry-run` still calls the Fireflies API; it only prevents writing to files.

@@ -1,8 +1,9 @@
 # MEMORY
 
-This file is read at the start of every agent session. Use it to record preferences,
-rules, and pointers that should persist across conversations. Keep entries short and
-operational. Delete or replace the placeholder lines below with your own.
+Core working memory, read at the start of every agent session. Keep it short (target under
+6,000 characters): only preferences, rules, and pointers that apply across tasks.
+Topic-specific lessons go to `90_System/Memory/<Topic>.md`, read only when relevant.
+Delete or replace the placeholder lines below with your own.
 
 ---
 
@@ -17,9 +18,9 @@ operational. Delete or replace the placeholder lines below with your own.
 
 ## Learned Rules
 
-<!-- Durable lessons from past sessions — things the agent should always remember.
-     Add a new bullet any time you correct the agent or it makes a mistake worth
-     avoiding again. Remove rules that are no longer relevant.
+<!-- Durable cross-task lessons from past sessions. Add a bullet only when a correction
+     applies to many kinds of tasks; tool- or topic-specific lessons belong in a topic
+     file below. Remove rules that are no longer relevant.
 -->
 - Prefer wrapper skills over direct external-service access.
 - Keep runtime state, logs, and secrets out of version control.
@@ -42,3 +43,12 @@ operational. Delete or replace the placeholder lines below with your own.
      was non-obvious and could happen again.
 -->
 - Record only mistakes worth actively avoiding next time.
+
+## Topic memory (read only when relevant)
+- `90_System/Memory/Routines_and_Sync.md`: day-start/day-end, mailbox, calendar and transcript sync, recovery commands.
+- `90_System/Memory/Tools_and_Environment.md`: local tools, document formats, sandbox and environment quirks.
+
+## Admission Rule
+- Add a note only if it is reusable across future sessions, not already covered by `AGENTS.md` or `SOUL.md`, and worth its reading cost.
+- Cross-task rules go here; topic- or tool-specific lessons go to the matching `90_System/Memory/<Topic>.md` (create a new topic file only when none fits, and list it above).
+- No dated run logs or incident reports in memory; routine run results belong to the routine's own report.

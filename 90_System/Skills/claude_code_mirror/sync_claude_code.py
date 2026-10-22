@@ -71,7 +71,7 @@ This repo keeps Codex-facing docs and wrappers as the source of truth and genera
 - `.claude/skills/`
 - `.claude/generated-map.json`
 
-Regenerate after changing `AGENTS.md`, `SOUL.md`, `MEMORY.md`, `SKILLS.md`, or `.agents/skills/**`:
+Regenerate after changing `AGENTS.md`, `SOUL.md`, `SKILLS.md`, or `.agents/skills/**`:
 
 ```powershell
 .\\.venv\\Scripts\\python.exe 90_System\\Skills\\claude_code_mirror\\sync_claude_code.py
@@ -281,114 +281,64 @@ def infer_skill_class(source_name: str) -> str:
     return "general"
 
 
+def extract_sections(markdown: str) -> list[tuple[str, str]]:
+    sections: list[tuple[str, str]] = []
+    for match in re.finditer(r"^## (.+?)\s*$([\s\S]*?)(?=^## |\Z)", markdown, flags=re.MULTILINE):
+        sections.append((match.group(1).strip(), match.group(2).strip()))
+    return sections
+
+
+def to_claude_skill_names(text: str) -> str:
+    source_names = {path.name for path in SOURCE_SKILLS_DIR.iterdir() if path.is_dir()} if SOURCE_SKILLS_DIR.exists() else set()
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group(1)
+        return f"`{slugify(name)}`" if name in source_names else match.group(0)
+
+    return re.sub(r"`([A-Za-z]+_[A-Za-z0-9_]+)`", replace, text)
+
+
 def build_claude_md() -> str:
     agents = read_text(REPO_ROOT / "AGENTS.md")
     soul = read_text(REPO_ROOT / "SOUL.md")
-    memory = read_text(REPO_ROOT / "MEMORY.md")
 
     identity = extract_bullets(soul, "Identity")
     defaults = extract_bullets(soul, "Behavioral Defaults")
-    non_negotiables = extract_bullets(agents, "Non-negotiables")
-    session_bootstrap = extract_bullets(agents, "Session bootstrap")
-    canonical_paths = extract_bullets(agents, "Canonical paths for locally stored data")
-    file_naming = extract_bullets(agents, "File naming")
-    add_content = extract_bullets(agents, "When adding new content")
-    deliverables = extract_bullets(agents, "Agent deliverables")
-    workblock_protocol = extract_bullets(agents, "Workblock protocol")
-    preferences = extract_bullets(memory, "Preferences")
-    learned_rules = extract_bullets(memory, "Learned Rules")
-    useful_pointers = extract_bullets(memory, "Useful Pointers")
-    known_pitfalls = extract_bullets(memory, "Known Pitfalls")
+    session_bootstrap = [item for item in extract_bullets(agents, "Session bootstrap") if "`SOUL.md`" not in item]
 
-    sections = [
+    lines = [
         "# Claude Instructions (Agentic Vault)",
         "",
-        "This file is generated from the repo-local Codex guidance. Treat the Codex docs as the source of truth and regenerate after changing them.",
+        "This file is generated from `AGENTS.md` and `SOUL.md` (the Codex source of truth) and contains all of their rules. Regenerate after changing them.",
         "",
-        "## Vault identity",
+        "## Startup",
+        "- Do not re-read `AGENTS.md` or `SOUL.md`; their content is below.",
+        "- At session start, read only the short core `MEMORY.md` from the repo root.",
     ]
-    sections.extend(f"- {item}" for item in identity)
-    sections.extend(
+    lines.extend(f"- {item}" for item in session_bootstrap)
+
+    for heading, items in (("Vault identity", identity), ("Behavioral defaults", defaults)):
+        if items:
+            lines.extend(["", f"## {heading}"])
+            lines.extend(f"- {item}" for item in items)
+
+    for heading, body in extract_sections(agents):
+        if heading == "Session bootstrap" or not body:
+            continue
+        body_lines = [line for line in body.splitlines() if "use hyphens instead of underscores" not in line]
+        lines.extend(["", f"## {heading}", to_claude_skill_names("\n".join(body_lines))])
+
+    lines.extend(
         [
             "",
-            "## Startup",
-            "- At the start of each session, read `AGENTS.md`, `SOUL.md`, and `MEMORY.md` from the repo root.",
-        ]
-    )
-    sections.extend(
-        f"- {item}"
-        for item in session_bootstrap
-        if item
-        not in {
-            "In every session, read this `AGENTS.md`, `SOUL.md` as a behavioral guidance and `MEMORY.md` as learned working memory from root."
-        }
-    )
-    sections.extend(
-        [
-            "",
-            "## Behavioral defaults",
-        ]
-    )
-    sections.extend(f"- {item}" for item in defaults)
-    sections.extend(f"- {item}" for item in preferences)
-    sections.extend(
-        [
-            "",
-            "## Non-negotiables",
-        ]
-    )
-    sections.extend(f"- {item}" for item in non_negotiables)
-    sections.extend(
-        [
-            "",
-            "## Canonical paths",
-        ]
-    )
-    sections.extend(f"- {item}" for item in canonical_paths)
-    sections.extend(
-        [
-            "",
-            "## Naming",
-        ]
-    )
-    sections.extend(f"- {item}" for item in file_naming)
-    sections.extend(
-        [
-            "",
-            "## Follow-up updates",
-        ]
-    )
-    sections.extend(f"- {item}" for item in add_content)
-    sections.extend(
-        [
-            "",
-            "## Deliverables",
-        ]
-    )
-    sections.extend(f"- {item}" for item in deliverables)
-    sections.extend(["", "## Workblock protocol"])
-    sections.extend(f"- {item}" for item in workblock_protocol)
-    sections.extend(
-        [
-            "",
-            "## Working memory",
-        ]
-    )
-    sections.extend(f"- {item}" for item in learned_rules[:8])
-    sections.extend(f"- {item}" for item in useful_pointers[:4])
-    sections.extend(f"- {item}" for item in known_pitfalls[:4])
-    sections.extend(
-        [
-            "",
-            "## Skill routing",
-            "- Prefer repo-local project skills under `.claude/skills/`.",
-            "- The mirrored skills are generated from `.agents/skills/**/SKILL.md` and call the existing `90_System/Skills/**` automation code.",
+            "## Claude Code notes",
+            "- Skill names above are the Claude Code mirrors in `.claude/skills/`; their Codex sources in `.agents/skills/` use underscores and call the `90_System/Skills/**` automation code.",
             "- Keep external-service access inside the dedicated wrappers. Do not improvise direct Gmail, Slack, Fireflies, Todoist, Google Calendar, or Clockify access.",
             "- If a task involves local document editing outside the vault, create or update only an exported copy under `70_Exports/YYYY/MM/DD/` and report both source and exported paths.",
             "- Use `gdocs`, `gsheets`, and `gslides` for Google document editing through the shared runtime.",
         ]
     )
-    return "\n".join(sections) + "\n"
+    return "\n".join(lines) + "\n"
 
 
 def build_settings() -> dict:

@@ -12,6 +12,12 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
+META_SKILL_DIR = Path(__file__).resolve().parents[1] / "meeting_metadata"
+if str(META_SKILL_DIR) not in sys.path:
+    sys.path.insert(0, str(META_SKILL_DIR))
+
+import meeting_metadata  # noqa: E402
+
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
@@ -323,8 +329,43 @@ def _default_manual_tail() -> str:
     return "## Preparation\n- ...\n\n## Meeting Notes\n- ...\n"
 
 
+def _render_frontmatter(
+    rendered_template: str,
+    ev: CalendarEvent,
+    existing_text: str | None,
+    project_rules: list[meeting_metadata.ProjectRule] | None,
+) -> str | None:
+    """Closed frontmatter from the template; keeps manual `project` and Fireflies `speakers`, else infers project."""
+    fm = meeting_metadata.split_frontmatter(rendered_template)
+    if fm is None or not fm.closed:
+        return None
+    fm.body = ""
+    existing = (
+        meeting_metadata.split_frontmatter(existing_text) if existing_text else None
+    )
+    if existing is not None and not meeting_metadata.is_empty(
+        meeting_metadata.get_value(existing, "project")
+    ):
+        meeting_metadata.copy_key(existing, fm, "project", after=("meeting_title",))
+    elif project_rules:
+        match = meeting_metadata.infer_project(
+            project_rules, title=ev.title, attendees=ev.attendees
+        )
+        if match.project:
+            meeting_metadata.set_project(fm, match.project)
+    if existing is not None and not meeting_metadata.is_empty(
+        meeting_metadata.get_value(existing, "speakers")
+    ):
+        meeting_metadata.copy_key(existing, fm, "speakers", after=("attendees",))
+    return meeting_metadata.join_frontmatter(fm).rstrip()
+
+
 def _render_meeting_note(
-    template_text: str, ev: CalendarEvent, preserved_tail: str | None = None
+    template_text: str,
+    ev: CalendarEvent,
+    preserved_tail: str | None = None,
+    existing_text: str | None = None,
+    project_rules: list[meeting_metadata.ProjectRule] | None = None,
 ) -> str:
     date_str = ev.start_local.date().isoformat()
     start_str = ev.start_local.strftime("%H:%M")
@@ -353,19 +394,24 @@ def _render_meeting_note(
         attendees_block = 'attendees:\n  - ""\n'
 
     rendered = re.sub(
-        r"(?ms)^attendees:\n(?:  -.*\n)*",
+        r"(?m)^attendees:\n(?:  -[^\n]*\n)*",
         attendees_block,
         rendered,
     )
 
-    rendered = rendered.replace("{{meeting_title}}", ev.title)
-    rendered = _strip_frontmatter(rendered).lstrip()
-    # Remove template manual sections; we append a writable tail after auto metadata.
-    rendered = re.sub(
-        r"(?ms)\n##\s+(?:Preparation|Meeting\s+Notes|Notes)\s*\n.*$",
-        "",
-        rendered,
-    ).rstrip()
+    # Note = closed frontmatter + auto blocks + preserved tail (the template body is not copied).
+    frontmatter = _render_frontmatter(rendered, ev, existing_text, project_rules)
+    if frontmatter is not None:
+        rendered = frontmatter
+    else:
+        rendered = rendered.replace("{{meeting_title}}", ev.title)
+        rendered = _strip_frontmatter(rendered).lstrip()
+        # Remove template manual sections; we append a writable tail after auto metadata.
+        rendered = re.sub(
+            r"(?ms)\n##\s+(?:Preparation|Meeting\s+Notes|Notes)\s*\n.*$",
+            "",
+            rendered,
+        ).rstrip()
 
     auto_lines: list[str] = []
     auto_lines.append("\n## Calendar (auto)\n")
@@ -497,6 +543,14 @@ def _sync_window(
 ) -> None:
     template_text = MEETING_TEMPLATE_PATH.read_text(encoding="utf-8")
     accounts = _normalize_accounts(accounts)
+    try:
+        project_rules = meeting_metadata.load_project_map()
+    except (OSError, ValueError) as exc:
+        print(
+            f"Warning: project map not loaded ({exc}); project inference skipped.",
+            file=sys.stderr,
+        )
+        project_rules = []
 
     events_by_account: dict[str, list[CalendarEvent]] = {}
     for account in accounts:
@@ -516,13 +570,19 @@ def _sync_window(
     for ev in events:
         path, wiki_target = _note_path_for_event(ev)
         preserved_tail: str | None = None
+        existing_text: str | None = None
         existed = path.exists()
         if existed:
-            preserved_tail = _extract_preserved_tail(path.read_text(encoding="utf-8"))
+            existing_text = path.read_text(encoding="utf-8")
+            preserved_tail = _extract_preserved_tail(existing_text)
         if not dry_run:
             path.parent.mkdir(parents=True, exist_ok=True)
             content = _render_meeting_note(
-                template_text, ev, preserved_tail=preserved_tail
+                template_text,
+                ev,
+                preserved_tail=preserved_tail,
+                existing_text=existing_text,
+                project_rules=project_rules,
             )
             path.write_text(content, encoding="utf-8")
         if existed:

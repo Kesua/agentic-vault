@@ -32,7 +32,7 @@ Respect the "Markdown-first" structure defined in `AGENTS.md`:
 -   **Areas:** `50_Areas/Area Name/` (Update `50_Areas/_Areas.md` if adding)
 
 ## 4. Operational Protocols
--   **Session Bootstrap:** Always respect the latest content in `MEMORY.md`. If you learn a durable lesson, suggest updating `MEMORY.md`.
+-   **Session Bootstrap:** Always respect the latest content in `MEMORY.md`. If you learn a durable lesson, suggest updating `MEMORY.md` (cross-task rules) or the matching `90_System/Memory/<Topic>.md` (topic lessons, read only when relevant).
 -   **Skill Routing:**
     -   **Maintenance:** Use `regular_*` skills (e.g., `regular_day_start`) for deterministic routine tasks.
     -   **Backfills:** Use `bulk_*` skills for processing historical data.

@@ -197,6 +197,16 @@ Copy-FileRelative -RelativeSource "00_Mailbox\Templates\SlackSummary_TEMPLATE.md
 Copy-FileRelative -RelativeSource "00_Mailbox\Templates\SlackThread_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "20_Meetings\Templates\MeetingNote_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "30_Projects\Templates\ProjectSnapshot_TEMPLATE.md"
+Copy-FileRelative -RelativeSource "30_Projects\Templates\ProjectJournal_TEMPLATE.md"
+$journalIndex = @'
+# Project journals
+
+One stable journal per project. Add a row when its first evidenced entry is created; update status and next actions only when they change.
+
+| Project journal | Status | Next actions |
+|---|---|---|
+'@
+Write-Utf8File -Path (Join-Path $Destination "30_Projects\Journal\_Journal.md") -Content $journalIndex
 Copy-FileRelative -RelativeSource "40_People\Templates\person_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "50_Areas\Area_TEMPLATE.md"
 Copy-FileRelative -RelativeSource "80_Workblocks\README.md"
@@ -258,6 +268,10 @@ A reusable, Obsidian-friendly vault skeleton for personal operating systems with
 3. Add your own secrets and OAuth files under `90_System/secrets/` without committing them.
 4. Install Python dependencies from `requirements.txt` into a local virtual environment.
 5. Adjust `.codex/config.toml` if you want this vault to work with additional external repos.
+
+## Project journals
+
+Use `regular_project_journal` for scheduled or explicitly requested incremental updates. Start at `30_Projects/Journal/_Journal.md`; collection and setup: `90_System/Skills/project_journal/RUNBOOK.md`. Choose your own sources, first date window, timezone and schedule; no project history or recurring task is included.
 '@
 
 $agents = @'
@@ -272,6 +286,7 @@ Scope: everything in this repository.
 
 ## Session bootstrap
 - In every session, read `AGENTS.md`, `SOUL.md`, and `MEMORY.md` from the repo root.
+- For project context, find its journal in `30_Projects/Journal/`; read relevant open commitments and the latest two daily entries, then follow sources as needed. Do not load all journals or the full index.
 - Update `MEMORY.md` only when a new lesson is likely to save time or prevent a repeated mistake.
 
 ## Canonical paths for locally stored data
@@ -279,6 +294,7 @@ Scope: everything in this repository.
 - Daily briefs live under `10_DailyBriefs/YYYY/MM/`.
 - Meetings live under `20_Meetings/YYYY/MM/DD/`. Each meeting record uses `20_Meetings/Templates/MeetingNote_TEMPLATE.md`.
 - Projects live under `30_Projects/<ProjectFolder>/`. Snapshots use `30_Projects/Templates/ProjectSnapshot_TEMPLATE.md`.
+- Project journals live in `30_Projects/Journal/<Project>.md`; index `30_Projects/Journal/_Journal.md`. Keep one stable journal per project; use `30_Projects/Templates/ProjectJournal_TEMPLATE.md` for new journals.
 - People live under `40_People/`. Each person record uses `40_People/Templates/person_TEMPLATE.md`.
 - Areas live under `50_Areas/`.
 - Workblocks live under `80_Workblocks/` and provide short-lived session handoff state; they are not authoritative project documentation.
@@ -304,6 +320,7 @@ Scope: everything in this repository.
 
 ## When adding new content
 - If the change affects a project, also update `30_Projects/_Projects.md`.
+- Journal only new actionable changes: one bullet, one sentence, at most 25 words excluding one source link. Preserve history; do not repeat summaries, unchanged tasks or empty daily entries. Update journal/index status and actions only when they change.
 - If the change creates a meeting note, add it to `20_Meetings/_MeetingIndex.md`.
 - If the change adds people context, update `40_People/` and `40_People/_PeopleIndex.md`.
 - If the change adds or updates an area, reflect it in `50_Areas/_Areas.md`.
@@ -320,6 +337,7 @@ Scope: everything in this repository.
 ## Skill routing
 - Skills are available in `.agents/skills/`.
 - Use `regular_*` for deterministic maintenance flows.
+- Use `regular_project_journal` for scheduled incremental project journals or the owner's explicit request for the same update; follow its collection runbook. Installing it does not schedule future runs.
 - Use `bulk_*` for deterministic backfills.
 - Use `adhoc_*` for one-off external-system or local-file work.
 
@@ -393,6 +411,9 @@ This file is generated or maintained from the repo-local guidance. Treat `AGENTS
 - At session start, search `80_Workblocks/` for relevant `active` or `blocked` workblocks, load at most one unambiguous result, and verify it against current files.
 - Create or update a workblock only for continuing work. Use verified facts, keep source session IDs instead of transcripts, and mark `completed` only when the done condition is proven or confirmed.
 - End every final response with exactly one receipt: `Workblock: updated <path>`, `Workblock: read, unchanged <path>`, or `Workblock: not needed — one-off task`.
+
+## Project journals
+- Follow the journal context and writing rules in `AGENTS.md`. Use `regular-project-journal` for scheduled or explicitly requested incremental updates in `30_Projects/Journal/`.
 '@
 
 $skills = @'
@@ -413,6 +434,12 @@ Skills are optional mini-playbooks that the agent can load on demand.
 - deterministic vault-maintenance flow -> `regular_*`
 - deterministic backfill -> `bulk_*`
 - exploratory lookup, retrieval, draft, or one-off create action -> `adhoc_*`
+
+## Project journals
+- `regular_project_journal`: use for scheduled or explicitly requested incremental journal updates.
+  - Skill: `.agents/skills/regular_project_journal/SKILL.md`
+  - Collection and progress: `90_System/Skills/project_journal/RUNBOOK.md`
+  - Journals: `30_Projects/Journal/`; template: `30_Projects/Templates/ProjectJournal_TEMPLATE.md`
 '@
 
 $codexReadme = @'
@@ -579,6 +606,9 @@ Legend
 | Project | Area | Status | Next 1 to 3 actions | Snapshot |
 |---|---|---|---|---|
 | [[30_Projects/ExampleProject/Example Project]] | [[50_Areas/Example Area]] | Green | - Define outcome<br>- Confirm next milestone | [[30_Projects/ExampleProject/Example Project - Snapshot]] |
+
+## Project journals
+- [[30_Projects/Journal/_Journal|Project journal index]] — stable, sourced history for each project.
 
 ## On hold / backlog
 - [[Someday Project]] (notes: ...)

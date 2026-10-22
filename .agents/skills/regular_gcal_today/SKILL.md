@@ -12,3 +12,6 @@ This is a **wrapper** skill for `90_System/Skills/gcal_today/`.
   - `.\.venv\Scripts\python.exe 90_System\Skills\gcal_today\gcal_today.py sync`
 - Dry run:
   - `.\.venv\Scripts\python.exe 90_System\Skills\gcal_today\gcal_today.py sync --dry-run`
+
+## Metadata
+- Fills empty frontmatter `project:` (journal name) from `30_Projects/Journal/_project_map.json`; ambiguous stays empty, manual values and Fireflies `speakers` are kept.

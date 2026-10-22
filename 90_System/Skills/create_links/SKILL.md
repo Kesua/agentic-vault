@@ -36,7 +36,10 @@ description: "Regular linking hygiene: scan markdown for exact person/project/ar
   - fenced code blocks
   - inline code
 - Uses exact, case-sensitive matching with non-alphanumeric boundaries only.
-- If the same alias exists in multiple entity notes, that alias is logged as ambiguous and not linked.
+- If the same alias exists in multiple entity notes, that alias is logged as ambiguous and not linked (a person note whose title equals the alias owns it).
+- Person note titles with 2+ words are always candidates; the longest mention wins, and ambiguous aliases still block shorter matches inside them.
+- A single-word person alias (e.g. a first name) is ambiguous when 2+ people notes share that first name (legacy "X Y X Y" duplicate notes do not count), and is never linked when the next word is capitalized ("Alex Smith") or inside emails and dotted names ("alex.novak@example.com", "Dr.Alex").
+- Tests: `.\.venv\Scripts\python.exe -m unittest 90_System\Skills\create_links\test_create_links.py`
 
 ## Link format
 - People: `[[Person Name|Alias]]`

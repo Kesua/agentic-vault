@@ -7,6 +7,7 @@ meeting_title: ""
 project: ""
 attendees:
   - ""
+speakers: []
 source: ""  # calendar / email / ad-hoc
 ---
 

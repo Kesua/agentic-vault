@@ -1,6 +1,6 @@
 ---
 name: "adhoc-word-docs"
-description: "Use when the task involves reading, creating, or editing `.docx` files in this vault. Prefer `python-docx` and the bundled renderer helper for layout checks."
+description: "Use when the task involves reading, creating, or editing `.docx` or legacy `.doc` Word files (including tracked changes). Prefer `python-docx`; on Windows with Microsoft Word, use Word COM for `.doc` conversion, revisions, and PDF rendering."
 ---
 
 # Ad-hoc Word Docs
@@ -51,6 +51,13 @@ System tools for rendering:
 - Poppler / `pdftoppm`
 
 If those system tools are missing, continue with `python-docx` edits and explicitly note that visual validation was not possible.
+
+## Legacy `.doc`, tracked changes, and rendering without LibreOffice
+- `python-docx` reads only `.docx`. If Microsoft Word is installed (Windows), use Word COM; otherwise convert with LibreOffice (`soffice --headless --convert-to docx`) when available.
+- Convert a legacy `.doc` into the exported copy, never in place: open the source read-only, then `SaveAs2(<70_Exports\YYYY\MM\DD\<name>.docx>, 16)` (16 = `wdFormatDocumentDefault`), then close without saving the source.
+- Word COM keeps tracked revisions and comments; `python-docx` does not show or create revisions. When the source has tracked changes or comments, report their counts and keep them, or make the edit through Word COM with `TrackRevisions = True` when the owner wants the change visible as a revision.
+- For page renders without LibreOffice, Word COM `ExportAsFixedFormat(<pdf>, 17)` produces a PDF; render pages from it with `pdftoppm` or PyMuPDF.
+- Set `PYTHONIOENCODING=utf-8` before printing non-ASCII text from Python in PowerShell.
 
 ## Helper files
 - Renderer: `.agents\skills\adhoc_word_docs\scripts\render_docx.py`
