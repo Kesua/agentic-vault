@@ -98,7 +98,7 @@ A **meeting note** (`20_Meetings/2026/10/22/1400 - Acme renewal call.md`) is cre
 |---|---|
 | **Files are the memory** | Notes are plain Markdown with stable paths (`20_Meetings/YYYY/MM/DD/HHmm - Title.md`). Any tool, any AI, any decade can read them. |
 | **Scripts fetch, the AI thinks** | Syncing is done by deterministic Python skills, not by an LLM clicking around your accounts. Runs are cheap, repeatable and auditable — tokens go to reasoning. |
-| **The agent knows the house rules** | `AGENTS.md` (where things live), `SOUL.md` (how it behaves) and `MEMORY.md` (lessons you taught it) are read at the start of every session, by every assistant. |
+| **The agent knows the house rules** | `AGENTS.md` (where things live and where to look first), `SOUL.md` (how it behaves) and a short core `MEMORY.md` (lessons you taught it) are read at the start of every session, by every assistant. Topic lessons live in `90_System/Memory/` and are read only when a task needs them, so startup stays cheap. |
 | **Nothing outside is touched in place** | External files are copied to `70_Exports/YYYY/MM/DD/` before editing. Emails become drafts, never sent. Folder structure and your notes are never moved or deleted without asking. |
 | **Continuity between sessions** | *Workblocks* carry the handoff state of unfinished work, so tomorrow's session picks up where today's stopped. |
 
@@ -113,6 +113,8 @@ A **meeting note** (`20_Meetings/2026/10/22/1400 - Acme renewal call.md`) is cre
 5. **Make it daily** — paste the ready-made prompts from [`90_System/Automations/`](90_System/Automations/README.md) into your assistant's scheduler (Codex automations, Claude Code scheduled tasks, …): day start at 05:30, day end at 16:00, project journal at 16:30. Keep or delete the optional lines for Telegram, commit and push, or add your own wishes in plain language.
 
 > **The wizard does not schedule anything.** You decide what runs, when, and in which assistant. Until you schedule a routine, the vault only updates when you ask.
+
+**Your preferences for every project (optional).** Rules that should apply in all folders, not just this vault — tone, language, "confirm before deciding" — belong in each assistant's user-level file, outside the vault: Codex `~/.codex/AGENTS.md`, Claude Code `~/.claude/CLAUDE.md`, Gemini CLI `~/.gemini/GEMINI.md`. Each assistant reads only its own file, so keep the same text in every one you use. Vault-specific rules stay in `AGENTS.md`, `SOUL.md` and `MEMORY.md`; after editing `AGENTS.md` or `SOUL.md`, regenerate the Claude Code mirror with `python 90_System/Skills/claude_code_mirror/sync_claude_code.py`.
 
 On macOS, if you see "permission denied": `chmod +x Setup_Mac.command _setup/bootstrap_mac.sh`. Full walkthrough for non-technical users: [HOW_TO_INITIALIZE.md](HOW_TO_INITIALIZE.md).
 

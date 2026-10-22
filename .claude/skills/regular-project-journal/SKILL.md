@@ -34,6 +34,7 @@ Use `Task — owner: action; agreed deadline`, `Done — evidenced result`, `Wai
 ## New projects and boundaries
 
 - Create a journal only for evidenced work or an accepted commitment by the owner. Check names and aliases; one company can have multiple projects. Keep unclear mentions in runtime state.
+- Add a new or renamed journal to `30_Projects/Journal/_project_map.json` (client domains, meeting title keywords, dedicated Slack channels); meeting notes get their `project:` from it.
 - Start from `30_Projects/Templates/ProjectJournal_TEMPLATE.md`: title, one scope sentence and the first meaningful entry. Add its link/status to `_Journal.md` and link the journal from `30_Projects/_Projects.md`. Do not copy historical reconstructions or create empty daily entries.
 - Keep source inventories, transcript quotations, repeated summaries, unchanged tasks and operational errors out of journals. Errors belong in runtime state.
 - Check dates, sources, brevity and semantic duplicates before confirming source progress. Leave incomplete sources pending for retry. Report only change counts and required action; stay quiet when nothing changed.

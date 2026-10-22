@@ -7,6 +7,8 @@ description: "Wrapper skill: run the vault end-of-day routine across regular ski
 
 Run the vault’s end-of-day automations in order so transcripts, mailbox exports, people notes, and links stay in sync.
 
+Before running, read `90_System/Memory/Routines_and_Sync.md` for known failure modes and recovery commands. Report run results in the routine output; do not append dated run logs to `MEMORY.md`.
+
 ## It runs
 - `regular_fireflies_sync`
 - `regular_process_emails`

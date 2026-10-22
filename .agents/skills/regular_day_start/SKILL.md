@@ -7,6 +7,8 @@ description: "Wrapper skill: run the vault morning routine across regular skills
 
 Run the vault’s morning automations in one go. This is best-effort: each step runs even if a prior step fails, and you get a summary at the end.
 
+Before running, read `90_System/Memory/Routines_and_Sync.md` for known failure modes and recovery commands. Report run results in the routine output; do not append dated run logs to `MEMORY.md`.
+
 ## It runs
 - `regular_git_submodules_pull`
 - `regular_gcal_today`

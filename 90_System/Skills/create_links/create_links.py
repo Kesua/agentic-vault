@@ -60,9 +60,16 @@ class FileChange:
 
 
 class AliasMatcher:
-    def __init__(self, registry: dict[str, AliasTarget]) -> None:
+    def __init__(
+        self, registry: dict[str, AliasTarget], blocked: set[str] | None = None
+    ) -> None:
         self._registry = registry
-        aliases = sorted(registry, key=lambda value: (-len(value), value))
+        # Blocked (ambiguous) aliases still take part in matching so the longest
+        # mention wins: "Alex Novak" must never degrade into a match of "Alex".
+        self._blocked = set(blocked or ()) - set(registry)
+        aliases = sorted(
+            set(registry) | self._blocked, key=lambda value: (-len(value), value)
+        )
         self._pattern = (
             re.compile("|".join(re.escape(alias) for alias in aliases))
             if aliases
@@ -87,7 +94,17 @@ class AliasMatcher:
                 continue
 
             alias_text = match.group(0)
+            if alias_text in self._blocked:
+                continue
             target = self._registry[alias_text]
+            if (
+                target.target_type == "person"
+                and _is_name_token(alias_text)
+                and _next_word_is_capitalized(text, end)
+            ):
+                # "Alex Smith": a lone first name followed by a surname-like word
+                # is a different full name.
+                continue
             parts.append(text[last_index:start])
             parts.append(target.wikilink)
             last_index = end
@@ -105,7 +122,51 @@ def _has_token_boundaries(text: str, start: int, end: int) -> bool:
         return False
     if end < len(text) and text[end].isalnum():
         return False
+    # Part of a dotted token such as an email or domain: "alex.novak@example.com", "Dr.Alex".
+    if start > 1 and text[start - 1] in ".@" and text[start - 2].isalnum():
+        return False
+    if end + 1 < len(text) and text[end] in ".@" and text[end + 1].isalnum():
+        return False
     return True
+
+
+NAME_TOKEN_RE = re.compile(r"^[^\W\d_]+(?:['’-][^\W\d_]+)*$")
+
+
+def _is_name_token(value: str) -> bool:
+    """A single word made of letters (incl. diacritics), e.g. a bare first name."""
+    return bool(NAME_TOKEN_RE.match(value))
+
+
+def _next_word_is_capitalized(text: str, end: int) -> bool:
+    cursor = end
+    while cursor < len(text) and text[cursor] in (" ", "\t", " "):
+        cursor += 1
+    if cursor == end or cursor >= len(text):
+        return False
+    return text[cursor].isupper()
+
+
+def _is_repeated_name(value: str) -> bool:
+    tokens = value.split()
+    half = len(tokens) // 2
+    return len(tokens) >= 2 and len(tokens) % 2 == 0 and tokens[:half] == tokens[half:]
+
+
+def _first_name_counts(person_names: dict[str, set[str]]) -> dict[str, int]:
+    """Count distinct people notes per first name (casefolded), from multi-word names."""
+    counts: dict[str, int] = defaultdict(int)
+    for stem, names in person_names.items():
+        if _is_repeated_name(stem):
+            continue  # legacy "X Y X Y" duplicate of "X Y"; not a different person
+        first_names = set()
+        for name in names:
+            tokens = name.split()
+            if len(tokens) >= 2 and "@" not in name and _is_name_token(tokens[0]):
+                first_names.add(tokens[0].casefold())
+        for first_name in first_names:
+            counts[first_name] += 1
+    return counts
 
 
 def _iter_markdown_files(root: Path) -> list[Path]:
@@ -328,6 +389,8 @@ def _build_alias_registry() -> tuple[
     dict[str, AliasTarget], dict[str, list[AliasTarget]]
 ]:
     alias_map: dict[str, list[AliasTarget]] = defaultdict(list)
+    # person link path (note stem) -> multi-word names (stem + aliases), for first-name ambiguity
+    person_names: dict[str, set[str]] = defaultdict(set)
 
     for expected_type, root in ENTITY_SOURCE_DIRS.items():
         for path in _iter_markdown_files(root):
@@ -340,6 +403,13 @@ def _build_alias_registry() -> tuple[
 
             aliases = metadata.get("aliases")
             if not isinstance(aliases, list):
+                aliases = []
+            aliases = list(aliases)
+            if expected_type == "person" and len(path.stem.split()) >= 2:
+                # The note title (full name) is always a candidate, so a full-name mention
+                # links to its own note instead of another note's shorter alias.
+                aliases.append(path.stem)
+            if not aliases:
                 continue
 
             relative_path = path.relative_to(REPO_ROOT)
@@ -349,6 +419,12 @@ def _build_alias_registry() -> tuple[
                 else relative_path.with_suffix("").as_posix()
             )
             source_file = relative_path.as_posix()
+            if expected_type == "person":
+                person_names[target_link_path].update(
+                    str(alias).strip()
+                    for alias in aliases
+                    if len(str(alias).split()) >= 2
+                )
 
             seen_aliases: set[str] = set()
             for alias in aliases:
@@ -365,17 +441,46 @@ def _build_alias_registry() -> tuple[
                     )
                 )
 
+    return _resolve_registry(alias_map, person_names)
+
+
+def _resolve_registry(
+    alias_map: dict[str, list[AliasTarget]],
+    person_names: dict[str, set[str]],
+) -> tuple[dict[str, AliasTarget], dict[str, list[AliasTarget]]]:
+    first_name_counts = _first_name_counts(person_names)
     registry: dict[str, AliasTarget] = {}
     ambiguous: dict[str, list[AliasTarget]] = {}
     for alias_text, targets in alias_map.items():
-        unique_targets = {
-            (target.target_type, target.target_link_path, target.source_file): target
-            for target in targets
-        }
-        if len(unique_targets) == 1:
-            registry[alias_text] = next(iter(unique_targets.values()))
-        else:
-            ambiguous[alias_text] = list(unique_targets.values())
+        unique_targets = list(
+            {
+                (target.target_type, target.target_link_path, target.source_file): target
+                for target in targets
+            }.values()
+        )
+        if len(unique_targets) > 1:
+            # A person note whose title equals the alias owns it (e.g. vs a stray duplicate).
+            owners = [
+                target
+                for target in unique_targets
+                if target.target_type == "person"
+                and target.target_link_path == alias_text
+            ]
+            if len(owners) == 1:
+                unique_targets = owners
+        if len(unique_targets) != 1:
+            ambiguous[alias_text] = unique_targets
+            continue
+        target = unique_targets[0]
+        if (
+            target.target_type == "person"
+            and _is_name_token(alias_text)
+            and first_name_counts.get(alias_text.casefold(), 0) >= 2
+        ):
+            # A bare first name shared by 2+ people notes cannot be resolved safely.
+            ambiguous[alias_text] = unique_targets
+            continue
+        registry[alias_text] = target
 
     return registry, ambiguous
 
@@ -580,7 +685,7 @@ def _rewrite_body(text: str, matcher: AliasMatcher) -> tuple[str, int]:
 
 def sync_links(dry_run: bool) -> int:
     registry, ambiguous = _build_alias_registry()
-    matcher = AliasMatcher(registry)
+    matcher = AliasMatcher(registry, blocked=set(ambiguous))
 
     files_scanned = 0
     files_skipped_entity_notes = 0

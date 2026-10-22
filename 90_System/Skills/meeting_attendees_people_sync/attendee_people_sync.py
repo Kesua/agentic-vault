@@ -4,6 +4,7 @@ import argparse
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 
@@ -317,6 +318,9 @@ def _load_person_notes() -> list[PersonNote]:
     for path in _iter_markdown_files(PEOPLE_DIR):
         if path == PEOPLE_INDEX_PATH or "Templates" in path.parts:
             continue
+        if _is_repeated_name(path.stem):
+            # Legacy "X Y X Y" duplicates of "X Y"; never match or refresh them.
+            continue
         text = path.read_text(encoding="utf-8")
         metadata_block, body = _split_leading_metadata(text)
         metadata = _parse_metadata_block(metadata_block)
@@ -336,13 +340,22 @@ def _build_lookup(
         emails = _ensure_list(note.metadata.get("emails"))
         aliases = _ensure_list(note.metadata.get("aliases"))
         aliases.append(note.title)
+        aliases.append(note.path.stem)
         for email in emails:
-            by_email.setdefault(email.casefold(), []).append(note)
+            _add_unique(by_email, email.casefold(), note)
         for alias in aliases:
-            by_alias.setdefault(alias.casefold(), []).append(note)
+            _add_unique(by_alias, alias.casefold(), note)
             for variant in _normalized_name_variants(alias):
-                by_alias.setdefault(variant, []).append(note)
+                _add_unique(by_alias, variant, note)
     return by_email, by_alias
+
+
+def _add_unique(index: dict[str, list[PersonNote]], key: str, note: PersonNote) -> None:
+    # One note counts once per key; otherwise a note whose title equals its alias
+    # looks ambiguous (len > 1), is never matched, and a duplicate note gets created.
+    bucket = index.setdefault(key, [])
+    if all(existing.path != note.path for existing in bucket):
+        bucket.append(note)
 
 
 def _pick_note(
@@ -351,26 +364,62 @@ def _pick_note(
     by_alias: dict[str, list[PersonNote]],
 ) -> PersonNote | None:
     for email in record.emails:
-        matches = by_email.get(email.casefold(), [])
+        matches = _unique_notes(by_email.get(email.casefold(), []))
         if len(matches) == 1:
             return matches[0]
     for alias in [record.name, *record.aliases]:
-        matches = by_alias.get(alias.casefold(), [])
+        matches = _unique_notes(by_alias.get(alias.casefold(), []))
         if len(matches) == 1:
             return matches[0]
+        owner = _title_owner(matches, alias)
+        if owner is not None:
+            return owner
         for variant in _normalized_name_variants(alias):
-            variant_matches = by_alias.get(variant, [])
+            variant_matches = _unique_notes(by_alias.get(variant, []))
             if len(variant_matches) == 1:
                 return variant_matches[0]
     return None
 
 
-def _max_date(a: str, b: str) -> str:
+def _unique_notes(notes: list[PersonNote]) -> list[PersonNote]:
+    unique: dict[Path, PersonNote] = {}
+    for note in notes:
+        unique.setdefault(note.path, note)
+    return list(unique.values())
+
+
+def _title_owner(notes: list[PersonNote], name: str) -> PersonNote | None:
+    owners = [note for note in notes if note.path.stem.casefold() == name.casefold()]
+    return owners[0] if len(owners) == 1 else None
+
+
+def _is_iso_date(value: str) -> bool:
+    return bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", value or ""))
+
+
+def _clamp_date(value: str, run_date: str) -> str:
+    """Drop dates that are not ISO dates or lie after the run date (e.g. upcoming meetings)."""
+    value = str(value or "").strip()[:10]
+    if not _is_iso_date(value) or value > run_date:
+        return ""
+    return value
+
+
+def _max_date(a: str, b: str, run_date: str | None = None) -> str:
+    if run_date is not None:
+        a = _clamp_date(a, run_date)
+        b = _clamp_date(b, run_date)
     if not a:
         return b
     if not b:
         return a
     return a if a >= b else b
+
+
+def _is_repeated_name(value: str) -> bool:
+    tokens = value.split()
+    half = len(tokens) // 2
+    return len(tokens) >= 2 and len(tokens) % 2 == 0 and tokens[:half] == tokens[half:]
 
 
 def _render_person_frontmatter(metadata: dict[str, object]) -> str:
@@ -427,7 +476,37 @@ def _render_new_person_note(template_text: str, record: AttendeeRecord) -> str:
     return rendered
 
 
-def _update_existing_note(note: PersonNote, record: AttendeeRecord) -> str:
+def _resolve_new_note_path(record: AttendeeRecord) -> tuple[Path, str, bool]:
+    """Return (path, title, exists) for an attendee without a matched note.
+
+    Never builds a name from the title plus the raw name or email ("X Y X Y"): when
+    the plain "X Y.md" (or "X Y (domain).md") already exists, that note is reused.
+    """
+    title = record.name
+    path = PEOPLE_DIR / f"{_sanitize_filename(title)}.md"
+    if not path.exists():
+        return path, title, False
+    domain_title = _title_with_domain(record)
+    if domain_title == title:
+        return path, title, True
+    domain_path = PEOPLE_DIR / f"{_sanitize_filename(domain_title)}.md"
+    return domain_path, domain_title, domain_path.exists()
+
+
+def _load_single_note(path: Path) -> PersonNote | None:
+    text = path.read_text(encoding="utf-8")
+    metadata_block, body = _split_leading_metadata(text)
+    metadata = _parse_metadata_block(metadata_block)
+    if str(metadata.get("type", "")).strip() != "person":
+        return None
+    return PersonNote(
+        path=path, title=_find_title(body, path.stem), metadata=metadata, body=body
+    )
+
+
+def _update_existing_note(
+    note: PersonNote, record: AttendeeRecord, run_date: str | None = None
+) -> str:
     metadata = dict(note.metadata)
     aliases = _dedupe_preserve_order(
         _ensure_list(metadata.get("aliases"))
@@ -449,7 +528,9 @@ def _update_existing_note(note: PersonNote, record: AttendeeRecord) -> str:
     else:
         metadata["org"] = str(metadata.get("org", ""))
     metadata["last_touch"] = _max_date(
-        str(metadata.get("last_touch", "")), record.last_touch
+        str(metadata.get("last_touch", "")),
+        record.last_touch,
+        run_date or date.today().isoformat(),
     )
     body = note.body.lstrip("\ufeff")
     body = _refresh_body(
@@ -530,13 +611,15 @@ def _merge_record(
     existing.last_touch = _max_date(existing.last_touch, record.last_touch)
 
 
-def refresh_people_layout(*, dry_run: bool) -> int:
+def refresh_people_layout(*, dry_run: bool, run_date: str | None = None) -> int:
+    run_date = run_date or date.today().isoformat()
     updated = 0
     unchanged = 0
     for note in _load_person_notes():
         before = note.path.read_text(encoding="utf-8")
         emails = _ensure_list(note.metadata.get("emails"))
-        last_touch = str(note.metadata.get("last_touch", ""))
+        last_touch = _clamp_date(str(note.metadata.get("last_touch", "")), run_date)
+        note.metadata["last_touch"] = last_touch
         refreshed_body = _refresh_body(
             note.body.lstrip("\ufeff"),
             title=note.title,
@@ -586,7 +669,8 @@ def _update_people_index(attendee_titles: list[str], dry_run: bool) -> bool:
     return True
 
 
-def sync_people_from_meetings(*, dry_run: bool) -> int:
+def sync_people_from_meetings(*, dry_run: bool, run_date: str | None = None) -> int:
+    run_date = run_date or date.today().isoformat()
     if not PERSON_TEMPLATE_PATH.exists():
         raise RuntimeError(f"Missing template: {PERSON_TEMPLATE_PATH}")
 
@@ -600,7 +684,7 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
         metadata_block, _ = _split_leading_metadata(text)
         metadata = _parse_metadata_block(metadata_block)
         attendee_values = _ensure_list(metadata.get("attendees"))
-        date_value = str(metadata.get("date", ""))
+        date_value = _clamp_date(str(metadata.get("date", "")), run_date)
         for raw_value in attendee_values:
             record = _normalize_attendee(raw_value, date_value)
             if record is None:
@@ -613,7 +697,7 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
         text = mailbox_path.read_text(encoding="utf-8")
         metadata_block, _ = _split_leading_metadata(text)
         metadata = _parse_metadata_block(metadata_block)
-        date_value = str(metadata.get("last_message_at", ""))[:10]
+        date_value = _clamp_date(str(metadata.get("last_message_at", "")), run_date)
         participant_values = _ensure_list(metadata.get("participants"))
         for raw_value in participant_values:
             record = _normalize_attendee(raw_value, date_value)
@@ -632,19 +716,19 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
     ):
         note = _pick_note(record, by_email, by_alias)
         if note is None:
-            title = record.name
-            filename = _sanitize_filename(title) + ".md"
-            path = PEOPLE_DIR / filename
-            while path.exists():
-                title = _title_with_domain(record)
-                path = PEOPLE_DIR / f"{_sanitize_filename(title)}.md"
-                if not path.exists():
-                    break
-                path = (
-                    PEOPLE_DIR
-                    / f"{_sanitize_filename(title + ' ' + record.emails[0])}.md"
+            path, title, exists = _resolve_new_note_path(record)
+            existing_note = _load_single_note(path) if exists else None
+            if existing_note is not None:
+                note = existing_note
+                person_notes.append(note)
+                by_email, by_alias = _build_lookup(person_notes)
+        if note is None:
+            if path.exists():
+                print(
+                    "Skipped (non-person note at target path): "
+                    f"{path.relative_to(REPO_ROOT).as_posix()}"
                 )
-                break
+                continue
             record_for_write = AttendeeRecord(
                 raw_value=record.raw_value,
                 name=title,
@@ -677,7 +761,7 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
             by_email, by_alias = _build_lookup(person_notes)
         else:
             before = note.path.read_text(encoding="utf-8") if note.path.exists() else ""
-            after = _update_existing_note(note, record)
+            after = _update_existing_note(note, record, run_date)
             if after != before:
                 if not dry_run:
                     note.path.write_text(after, encoding="utf-8")
@@ -686,9 +770,8 @@ def sync_people_from_meetings(*, dry_run: bool) -> int:
                 note.body = _split_leading_metadata(after)[1]
             else:
                 unchanged += 1
-        attendee_titles.append(
-            _find_title(note.body, note.path.stem) if note.body else note.path.stem
-        )
+        # Link the index to the actual note file, not its H1 (which may differ).
+        attendee_titles.append(note.path.stem)
 
     attendee_titles = sorted(set(attendee_titles), key=str.casefold)
     index_updated = _update_people_index(attendee_titles, dry_run=dry_run)

@@ -13,6 +13,7 @@ description: "Regular Google Calendar sync: update upcoming meeting notes (today
 - Creates/updates one note per event in `20_Meetings/YYYY/MM/DD/` named `HHmm - Title.md`
 - Populates the note from `20_Meetings/Templates/MeetingNote_TEMPLATE.md`
 - Preserves your manual content starting at the `## Preparation` heading (if it already exists in the note)
+- Writes a closed YAML frontmatter; fills `project:` (journal name) via `90_System/Skills/meeting_metadata` and `30_Projects/Journal/_project_map.json` only when empty and unambiguous; keeps an existing `project` and Fireflies `speakers`
 - Adds missing links into `20_Meetings/_MeetingIndex.md` under the relevant month section(s)
 - If the same event exists in both accounts, only one note is kept (private wins)
 
